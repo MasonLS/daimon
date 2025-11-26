@@ -58,7 +58,7 @@ export default function DocumentEditPage() {
       {/* Back navigation */}
       <div className="fixed top-4 left-4 z-30">
         <button
-          onClick={() => router.push("/documents")}
+          onClick={() => router.push("/")}
           className="flex items-center gap-2 px-3 py-2 bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm rounded-lg border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:border-slate-300 dark:hover:border-slate-600 transition-all duration-200"
         >
           <svg
@@ -82,4 +82,3 @@ export default function DocumentEditPage() {
     </div>
   )
 }
-

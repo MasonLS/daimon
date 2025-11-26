@@ -7,9 +7,6 @@ import { authTables } from "@convex-dev/auth/server";
 // The schema provides more precise TypeScript types.
 export default defineSchema({
   ...authTables,
-  numbers: defineTable({
-    value: v.number(),
-  }),
   documents: defineTable({
     title: v.string(),
     content: v.string(), // JSON-stringified TipTap content
