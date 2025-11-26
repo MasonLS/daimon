@@ -7,6 +7,8 @@ import { Id } from "@/convex/_generated/dataModel"
 import { SimpleEditor } from "@/components/tiptap-templates/simple/simple-editor"
 import { JSONContent } from "@tiptap/react"
 
+import { Spinner } from "@/components/ui/spinner"
+
 interface DocumentPageProps {
   documentId: Id<"documents">
 }
@@ -130,19 +132,8 @@ export function DocumentPage({ documentId }: DocumentPageProps) {
   // Loading state
   if (document === undefined) {
     return (
-      <div className="flex items-center justify-center h-screen">
-        <div className="flex items-center gap-2">
-          <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce"></div>
-          <div
-            className="w-2 h-2 bg-slate-500 rounded-full animate-bounce"
-            style={{ animationDelay: "0.1s" }}
-          ></div>
-          <div
-            className="w-2 h-2 bg-slate-600 rounded-full animate-bounce"
-            style={{ animationDelay: "0.2s" }}
-          ></div>
-          <p className="ml-2 text-slate-600 dark:text-slate-400">Loading document...</p>
-        </div>
+      <div className="flex-1 flex items-center justify-center bg-background">
+        <Spinner className="w-6 h-6 text-daemon" />
       </div>
     )
   }
@@ -150,12 +141,12 @@ export function DocumentPage({ documentId }: DocumentPageProps) {
   // Not found / access denied
   if (document === null) {
     return (
-      <div className="flex items-center justify-center h-screen">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-200 mb-2">
+      <div className="flex-1 flex items-center justify-center bg-background">
+        <div className="text-center max-w-md px-4">
+          <h1 className="font-[family-name:var(--font-display)] text-2xl font-semibold text-foreground mb-3">
             Document not found
           </h1>
-          <p className="text-slate-600 dark:text-slate-400">
+          <p className="text-muted-foreground">
             This document doesn&apos;t exist or you don&apos;t have access to it.
           </p>
         </div>
@@ -164,28 +155,30 @@ export function DocumentPage({ documentId }: DocumentPageProps) {
   }
 
   return (
-    <div className="min-h-screen flex flex-col">
-      {/* Header with title and save status */}
-      <header className="sticky top-0 z-20 bg-background/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-700 px-4 py-3">
-        <div className="max-w-4xl mx-auto flex items-center gap-4">
-          <input
-            type="text"
-            value={title}
-            onChange={(e) => handleTitleChange(e.target.value)}
-            className="flex-1 text-xl font-semibold bg-transparent border-none outline-none text-slate-800 dark:text-slate-200 placeholder:text-slate-400"
-            placeholder="Untitled document"
-          />
-          <SaveStatusIndicator status={saveStatus} />
+    <div className="flex flex-1 flex-col bg-background">
+      {/* Document header with title and save status */}
+      <div className="bg-background/50">
+        <div className="container py-4">
+          <div className="flex items-center gap-4 max-w-3xl">
+            <input
+              type="text"
+              value={title}
+              onChange={(e) => handleTitleChange(e.target.value)}
+              className="flex-1 font-[family-name:var(--font-display)] text-xl font-medium bg-transparent border-none outline-none text-foreground placeholder:text-muted-foreground"
+              placeholder="Untitled"
+            />
+            <SaveStatusIndicator status={saveStatus} />
+          </div>
         </div>
-      </header>
+      </div>
 
       {/* Editor */}
-      <main className="flex-1">
+      <div className="flex flex-1 flex-col min-h-0">
         <SimpleEditor
           initialContent={initialContent}
           onUpdate={handleContentUpdate}
         />
-      </main>
+      </div>
     </div>
   )
 }
@@ -193,22 +186,15 @@ export function DocumentPage({ documentId }: DocumentPageProps) {
 function SaveStatusIndicator({ status }: { status: SaveStatus }) {
   return (
     <div className="flex items-center gap-2 text-sm">
-      {status === "saved" && (
+      {status === "saved" ? (
         <>
-          <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-          <span className="text-slate-500 dark:text-slate-400">Saved</span>
+          <div className="w-1.5 h-1.5 bg-green-600 dark:bg-green-500 rounded-full"></div>
+          <span className="text-muted-foreground">Saved</span>
         </>
-      )}
-      {status === "saving" && (
+      ) : (
         <>
-          <div className="w-2 h-2 bg-yellow-500 rounded-full animate-pulse"></div>
-          <span className="text-slate-500 dark:text-slate-400">Saving...</span>
-        </>
-      )}
-      {status === "unsaved" && (
-        <>
-          <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
-          <span className="text-slate-500 dark:text-slate-400">Unsaved</span>
+          <div className="w-1.5 h-1.5 bg-daemon rounded-full"></div>
+          <span className="text-muted-foreground">Unsaved</span>
         </>
       )}
     </div>

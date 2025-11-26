@@ -4,7 +4,7 @@
   **************************************************/
 
   /* Light mode */
-  --tt-button-default-bg-color: var(--tt-gray-light-a-100);
+  --tt-button-default-bg-color: var(--transparent);
   --tt-button-hover-bg-color: var(--tt-gray-light-200);
   --tt-button-active-bg-color: var(--tt-gray-light-a-200);
   --tt-button-active-bg-color-emphasized: var(
@@ -24,7 +24,7 @@
 
   /* Dark mode */
   .dark & {
-    --tt-button-default-bg-color: var(--tt-gray-dark-a-100);
+    --tt-button-default-bg-color: var(--transparent);
     --tt-button-hover-bg-color: var(--tt-gray-dark-200);
     --tt-button-active-bg-color: var(--tt-gray-dark-a-200);
     --tt-button-active-bg-color-emphasized: var(
