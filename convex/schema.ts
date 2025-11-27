@@ -13,4 +13,30 @@ export default defineSchema({
     ownerId: v.id("users"),
     updatedAt: v.number(),
   }).index("by_ownerId", ["ownerId"]),
+
+  // Comments for AI-powered feedback
+  comments: defineTable({
+    documentId: v.id("documents"),
+    commentId: v.string(), // UUID stored in TipTap mark
+    selectedText: v.string(), // The text that was highlighted
+    status: v.union(
+      v.literal("pending"),
+      v.literal("streaming"),
+      v.literal("complete"),
+      v.literal("error")
+    ),
+    ownerId: v.id("users"),
+    createdAt: v.number(),
+    resolvedAt: v.optional(v.number()),
+  })
+    .index("by_documentId", ["documentId"])
+    .index("by_commentId", ["commentId"]),
+
+  // Comment messages for threaded conversations
+  commentMessages: defineTable({
+    commentId: v.id("comments"),
+    role: v.union(v.literal("user"), v.literal("assistant")),
+    content: v.string(),
+    createdAt: v.number(),
+  }).index("by_commentId", ["commentId"]),
 });

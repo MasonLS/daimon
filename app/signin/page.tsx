@@ -3,9 +3,8 @@
 import { useAuthActions } from "@convex-dev/auth/react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { Lightbulb } from "lucide-react";
-
 import { Button } from "@/components/ui/button";
+import { DaimonIcon } from "@/components/icons/daimon-icon";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
@@ -24,7 +23,7 @@ export default function SignIn() {
       {/* Header/Branding */}
       <div className="text-center mb-10 max-w-md">
         <div className="w-16 h-16 bg-daemon-muted rounded-full flex items-center justify-center mx-auto mb-6">
-          <Lightbulb className="w-8 h-8 text-daemon" />
+          <DaimonIcon className="w-8 h-8 text-daemon" />
         </div>
         <h1 className="font-[family-name:var(--font-display)] text-3xl font-semibold text-foreground mb-3">
           Daimon

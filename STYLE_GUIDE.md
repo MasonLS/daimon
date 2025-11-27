@@ -216,10 +216,11 @@ The editor uses its own styling system but integrates with the theme:
 
 ## Icons
 
-Use [Lucide React](https://lucide.dev/) icons consistently:
+Use [Lucide React](https://lucide.dev/) icons consistently, plus our custom DaimonIcon:
 
 ```tsx
-import { Lightbulb, PenLine, Trash2, Plus } from "lucide-react"
+import { PenLine, Trash2, Plus } from "lucide-react"
+import { DaimonIcon } from "@/components/icons/daimon-icon"
 
 // Standard size
 <Icon className="w-4 h-4" />
@@ -229,12 +230,25 @@ import { Lightbulb, PenLine, Trash2, Plus } from "lucide-react"
 ```
 
 Key icons:
-- `Lightbulb` - Daimon logo/brand
+- `DaimonIcon` - Daimon logo/brand, AI features, comments (custom demon horns icon)
 - `PenLine` - Writing
 - `BookOpen` - Sources
-- `Sparkles` - Prompts/AI
 - `Trash2` - Delete
 - `Plus` - Create new
+
+### DaimonIcon Usage
+
+The custom `DaimonIcon` (cute demon horns) should be used for all AI-related UI:
+
+```tsx
+import { DaimonIcon } from "@/components/icons/daimon-icon"
+
+// In buttons, badges, headers
+<DaimonIcon className="h-4 w-4 text-daemon" />
+
+// Empty states
+<DaimonIcon className="h-8 w-8 text-daemon/40" />
+```
 
 ---
 

@@ -5,9 +5,13 @@ import { useQuery, useMutation } from "convex/react"
 import { api } from "@/convex/_generated/api"
 import { Id } from "@/convex/_generated/dataModel"
 import { SimpleEditor } from "@/components/tiptap-templates/simple/simple-editor"
-import { JSONContent } from "@tiptap/react"
+import { JSONContent, Editor } from "@tiptap/react"
 
 import { Spinner } from "@/components/ui/spinner"
+import { DaimonIcon } from "@/components/icons/daimon-icon"
+import { Button } from "@/components/ui/button"
+import { EditorContextMenu } from "@/components/editor-context-menu"
+import { CommentsSidebar } from "@/components/comments-sidebar"
 
 interface DocumentPageProps {
   documentId: Id<"documents">
@@ -18,9 +22,12 @@ type SaveStatus = "saved" | "saving" | "unsaved"
 export function DocumentPage({ documentId }: DocumentPageProps) {
   const document = useQuery(api.documents.get, { id: documentId })
   const updateDocument = useMutation(api.documents.update)
-  
+  const commentCount = useQuery(api.comments.countByDocument, { documentId })
+
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("saved")
   const [title, setTitle] = useState("")
+  const [editor, setEditor] = useState<Editor | null>(null)
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false)
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const pendingContentRef = useRef<string | null>(null)
   const titleTimeoutRef = useRef<NodeJS.Timeout | null>(null)
@@ -117,6 +124,11 @@ export function DocumentPage({ documentId }: DocumentPageProps) {
     [documentId, updateDocument]
   )
 
+  // Open sidebar when a comment is created
+  const handleCommentCreated = useCallback(() => {
+    setIsSidebarOpen(true)
+  }, [])
+
   // Cleanup timeouts on unmount
   useEffect(() => {
     return () => {
@@ -156,29 +168,59 @@ export function DocumentPage({ documentId }: DocumentPageProps) {
 
   return (
     <div className="flex flex-1 flex-col bg-background">
-      {/* Document header with title and save status */}
-      <div className="bg-background/50">
-        <div className="container py-4">
-          <div className="flex items-center gap-4 max-w-3xl">
-            <input
-              type="text"
-              value={title}
-              onChange={(e) => handleTitleChange(e.target.value)}
-              className="flex-1 font-[family-name:var(--font-display)] text-xl font-medium bg-transparent border-none outline-none text-foreground placeholder:text-muted-foreground"
-              placeholder="Untitled"
-            />
-            <SaveStatusIndicator status={saveStatus} />
-          </div>
+      {/* Document header with title and save status - aligned with toolbar controls */}
+      <div className="flex items-center justify-center w-full px-4 sm:px-6 lg:px-8 pt-6 sm:pt-8 pb-2">
+        <div className="flex items-center gap-3 w-full max-w-[680px]">
+          <input
+            type="text"
+            value={title}
+            onChange={(e) => handleTitleChange(e.target.value)}
+            className="flex-1 font-[family-name:var(--font-display)] text-2xl font-medium bg-transparent border-none outline-none text-foreground placeholder:text-muted-foreground min-w-0"
+            placeholder="Untitled"
+          />
+          <SaveStatusIndicator status={saveStatus} />
+          {/* Comments toggle button */}
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+            className="relative flex-shrink-0"
+            title="Toggle comments"
+          >
+            <DaimonIcon className="h-4 w-4 text-daemon" />
+            {commentCount !== undefined && commentCount > 0 && (
+              <span className="absolute -top-1 -right-1 bg-daemon text-daemon-foreground text-[10px] font-medium rounded-full min-w-[16px] h-4 flex items-center justify-center px-1">
+                {commentCount}
+              </span>
+            )}
+          </Button>
         </div>
       </div>
 
-      {/* Editor */}
+      {/* Editor with context menu */}
       <div className="flex flex-1 flex-col min-h-0">
-        <SimpleEditor
-          initialContent={initialContent}
-          onUpdate={handleContentUpdate}
-        />
+        <EditorContextMenu
+          editor={editor}
+          documentId={documentId}
+          onCommentCreated={handleCommentCreated}
+        >
+          <div className="flex flex-1 flex-col min-h-0">
+            <SimpleEditor
+              initialContent={initialContent}
+              onUpdate={handleContentUpdate}
+              onEditorReady={setEditor}
+            />
+          </div>
+        </EditorContextMenu>
       </div>
+
+      {/* Comments sidebar */}
+      <CommentsSidebar
+        documentId={documentId}
+        editor={editor}
+        isOpen={isSidebarOpen}
+        onClose={() => setIsSidebarOpen(false)}
+      />
     </div>
   )
 }

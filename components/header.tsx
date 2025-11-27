@@ -2,9 +2,10 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { PenLine, BookOpen, Sparkles, Lightbulb } from "lucide-react"
+import { PenLine, BookOpen, Sparkles } from "lucide-react"
 
 import { cn } from "@/lib/utils"
+import { DaimonIcon } from "@/components/icons/daimon-icon"
 import { Badge } from "@/components/ui/badge"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { UserMenu } from "@/components/user-menu"
@@ -29,7 +30,7 @@ export function Header() {
         {/* Logo */}
         <Link href="/" className="flex items-center gap-2 mr-6">
           <div className="w-8 h-8 bg-daemon/15 rounded-full flex items-center justify-center">
-            <Lightbulb className="w-4 h-4 text-daemon" />
+            <DaimonIcon className="w-4 h-4 text-daemon" />
           </div>
           <span className="font-[family-name:var(--font-display)] text-lg font-semibold text-foreground">
             Daimon

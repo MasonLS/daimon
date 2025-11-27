@@ -19,6 +19,9 @@ import { Subscript } from "@tiptap/extension-subscript";
 import { Superscript } from "@tiptap/extension-superscript";
 import { Selection } from "@tiptap/extensions";
 
+// --- Custom Extensions ---
+import { CommentMark } from "@/components/tiptap-extensions/comment-mark";
+
 // --- UI Primitives ---
 import { Button } from "@/components/tiptap-ui-primitive/button";
 import { Spacer } from "@/components/tiptap-ui-primitive/spacer";
@@ -78,9 +81,12 @@ import "@/components/tiptap-templates/simple/simple-editor.scss";
 
 import defaultContent from "@/components/tiptap-templates/simple/data/content.json";
 
+import type { Editor } from "@tiptap/react";
+
 export interface SimpleEditorProps {
   initialContent?: JSONContent;
   onUpdate?: (content: JSONContent) => void;
+  onEditorReady?: (editor: Editor) => void;
 }
 
 const MainToolbarContent = ({
@@ -96,60 +102,62 @@ const MainToolbarContent = ({
     <>
       <Spacer />
 
-      <ToolbarGroup>
-        <UndoRedoButton action="undo" />
-        <UndoRedoButton action="redo" />
-      </ToolbarGroup>
+      <div className="flex items-center gap-1 w-full max-w-[680px]">
+        <ToolbarGroup>
+          <UndoRedoButton action="undo" />
+          <UndoRedoButton action="redo" />
+        </ToolbarGroup>
 
-      <ToolbarSeparator />
+        <ToolbarSeparator />
 
-      <ToolbarGroup>
-        <HeadingDropdownMenu levels={[1, 2, 3, 4]} portal={isMobile} />
-        <ListDropdownMenu
-          types={["bulletList", "orderedList", "taskList"]}
-          portal={isMobile}
-        />
-        <BlockquoteButton />
-        <CodeBlockButton />
-      </ToolbarGroup>
+        <ToolbarGroup>
+          <HeadingDropdownMenu levels={[1, 2, 3, 4]} portal={isMobile} />
+          <ListDropdownMenu
+            types={["bulletList", "orderedList", "taskList"]}
+            portal={isMobile}
+          />
+          <BlockquoteButton />
+          <CodeBlockButton />
+        </ToolbarGroup>
 
-      <ToolbarSeparator />
+        <ToolbarSeparator />
 
-      <ToolbarGroup>
-        <MarkButton type="bold" />
-        <MarkButton type="italic" />
-        <MarkButton type="strike" />
-        <MarkButton type="code" />
-        <MarkButton type="underline" />
-        {!isMobile ? (
-          <ColorHighlightPopover />
-        ) : (
-          <ColorHighlightPopoverButton onClick={onHighlighterClick} />
-        )}
-        {!isMobile ? <LinkPopover /> : <LinkButton onClick={onLinkClick} />}
-      </ToolbarGroup>
+        <ToolbarGroup>
+          <MarkButton type="bold" />
+          <MarkButton type="italic" />
+          <MarkButton type="strike" />
+          <MarkButton type="code" />
+          <MarkButton type="underline" />
+          {!isMobile ? (
+            <ColorHighlightPopover />
+          ) : (
+            <ColorHighlightPopoverButton onClick={onHighlighterClick} />
+          )}
+          {!isMobile ? <LinkPopover /> : <LinkButton onClick={onLinkClick} />}
+        </ToolbarGroup>
 
-      <ToolbarSeparator />
+        <ToolbarSeparator />
 
-      <ToolbarGroup>
-        <MarkButton type="superscript" />
-        <MarkButton type="subscript" />
-      </ToolbarGroup>
+        <ToolbarGroup>
+          <MarkButton type="superscript" />
+          <MarkButton type="subscript" />
+        </ToolbarGroup>
 
-      <ToolbarSeparator />
+        <ToolbarSeparator />
 
-      <ToolbarGroup>
-        <TextAlignButton align="left" />
-        <TextAlignButton align="center" />
-        <TextAlignButton align="right" />
-        <TextAlignButton align="justify" />
-      </ToolbarGroup>
+        <ToolbarGroup>
+          <TextAlignButton align="left" />
+          <TextAlignButton align="center" />
+          <TextAlignButton align="right" />
+          <TextAlignButton align="justify" />
+        </ToolbarGroup>
 
-      <ToolbarSeparator />
+        <ToolbarSeparator />
 
-      <ToolbarGroup>
-        <ImageUploadButton text="Add" />
-      </ToolbarGroup>
+        <ToolbarGroup>
+          <ImageUploadButton text="Add" />
+        </ToolbarGroup>
+      </div>
 
       <Spacer />
     </>
@@ -188,6 +196,7 @@ const MobileToolbarContent = ({
 export function SimpleEditor({
   initialContent,
   onUpdate,
+  onEditorReady,
 }: SimpleEditorProps = {}) {
   const isMobile = useIsBreakpoint();
   const { height } = useWindowSize();
@@ -238,6 +247,7 @@ export function SimpleEditor({
       Superscript,
       Subscript,
       Selection,
+      CommentMark,
       ImageUploadNode.configure({
         accept: "image/*",
         maxSize: MAX_FILE_SIZE,
@@ -256,6 +266,13 @@ export function SimpleEditor({
     editor,
     overlayHeight: toolbarRef.current?.getBoundingClientRect().height ?? 0,
   });
+
+  // Notify parent when editor is ready
+  useEffect(() => {
+    if (editor && onEditorReady) {
+      onEditorReady(editor);
+    }
+  }, [editor, onEditorReady]);
 
   useEffect(() => {
     if (!isMobile && mobileView !== "main") {
