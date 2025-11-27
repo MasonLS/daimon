@@ -3,7 +3,9 @@ import { Source_Sans_3, Crimson_Pro, Cormorant_Garamond } from "next/font/google
 import "./globals.css";
 import { ConvexAuthNextjsServerProvider } from "@convex-dev/auth/nextjs/server";
 import ConvexClientProvider from "@/components/ConvexClientProvider";
-import { Header } from "@/components/header";
+import { ThemeProvider } from "@/components/theme-provider";
+import { AppSidebar } from "@/components/app-sidebar";
+import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
 
 const sourceSans = Source_Sans_3({
   variable: "--font-sans",
@@ -44,10 +46,23 @@ export default function RootLayout({
           className={`${sourceSans.variable} ${crimsonPro.variable} ${cormorantGaramond.variable} antialiased`}
         >
           <ConvexClientProvider>
-            <div className="relative flex min-h-screen flex-col">
-              <Header />
-              <main className="flex flex-1 flex-col">{children}</main>
-            </div>
+            <ThemeProvider
+              attribute="class"
+              defaultTheme="system"
+              enableSystem
+              disableTransitionOnChange
+            >
+              <SidebarProvider>
+                <AppSidebar />
+                <SidebarInset>
+                  {/* Mobile sidebar trigger */}
+                  <header className="flex h-12 shrink-0 items-center gap-2 px-4 md:hidden">
+                    <SidebarTrigger className="-ml-1" />
+                  </header>
+                  <main className="flex flex-1 flex-col">{children}</main>
+                </SidebarInset>
+              </SidebarProvider>
+            </ThemeProvider>
           </ConvexClientProvider>
         </body>
       </html>
