@@ -15,6 +15,7 @@ import {
   Sun,
   Moon,
   ChevronsUpDown,
+  ChevronRight,
 } from "lucide-react"
 import { useAuthActions } from "@convex-dev/auth/react"
 import { useTheme } from "next-themes"
