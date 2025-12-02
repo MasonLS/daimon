@@ -150,6 +150,7 @@ export const create = mutation({
     // Schedule AI response generation
     await ctx.scheduler.runAfter(0, internal.comments.generateAIResponse, {
       commentDbId,
+      documentId: args.documentId,
       selectedText: args.selectedText,
       userId,
     });
@@ -190,6 +191,7 @@ export const addReply = mutation({
     // Schedule AI response
     await ctx.scheduler.runAfter(0, internal.comments.generateReply, {
       commentDbId: args.commentDbId,
+      documentId: comment.documentId,
       userId,
     });
 
@@ -270,6 +272,7 @@ export const saveAIMessage = internalMutation({
 export const generateAIResponse = internalAction({
   args: {
     commentDbId: v.id("comments"),
+    documentId: v.id("documents"),
     selectedText: v.string(),
     userId: v.id("users"),
   },
@@ -287,12 +290,12 @@ export const generateAIResponse = internalAction({
         userId: args.userId,
       });
 
-      // Generate response from Daimon
+      // Generate response from Daimon, including documentId in context for the search tool
       const result = await daimon.generateText(
         ctx,
         { threadId },
         {
-          prompt: args.selectedText,
+          prompt: `[Context: documentId=${args.documentId}]\n\n${args.selectedText}`,
         }
       );
 
@@ -325,6 +328,7 @@ export const generateAIResponse = internalAction({
 export const generateReply = internalAction({
   args: {
     commentDbId: v.id("comments"),
+    documentId: v.id("documents"),
     userId: v.id("users"),
   },
   returns: v.null(),
@@ -355,13 +359,15 @@ export const generateReply = internalAction({
         .map((m) => `${m.role === "user" ? "Writer" : "Daimon"}: ${m.content}`)
         .join("\n\n");
 
-      const prompt = `Previous conversation about highlighted text "${comment.selectedText}":\n\n${conversationContext}\n\nContinue the conversation as Daimon, responding to the writer's latest message.`;
+      const prompt = `[Context: documentId=${args.documentId}]\n\nPrevious conversation about highlighted text "${comment.selectedText}":\n\n${conversationContext}\n\nContinue the conversation as Daimon, responding to the writer's latest message.`;
 
-      // Generate response
+      // Generate response from Daimon
       const result = await daimon.generateText(
         ctx,
         { threadId },
-        { prompt }
+        {
+          prompt,
+        }
       );
 
       // Save the AI response

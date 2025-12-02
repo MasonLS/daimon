@@ -39,4 +39,24 @@ export default defineSchema({
     content: v.string(),
     createdAt: v.number(),
   }).index("by_commentId", ["commentId"]),
+
+  // Sources (file attachments) for documents - RAG indexed
+  sources: defineTable({
+    documentId: v.id("documents"),
+    filename: v.string(),
+    storageId: v.id("_storage"),
+    mimeType: v.string(),
+    status: v.union(
+      v.literal("uploading"),
+      v.literal("processing"),
+      v.literal("indexed"),
+      v.literal("error")
+    ),
+    ragEntryId: v.optional(v.string()), // RAG entry ID for deletion
+    errorMessage: v.optional(v.string()),
+    ownerId: v.id("users"),
+    createdAt: v.number(),
+  })
+    .index("by_documentId", ["documentId"])
+    .index("by_storageId", ["storageId"]),
 });

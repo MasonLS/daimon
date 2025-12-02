@@ -12,6 +12,8 @@ import { DaimonIcon } from "@/components/icons/daimon-icon"
 import { Button } from "@/components/ui/button"
 import { EditorContextMenu } from "@/components/editor-context-menu"
 import { CommentsSidebar } from "@/components/comments-sidebar"
+import { SourcesPanel } from "@/components/sources-panel"
+import { FileText } from "lucide-react"
 
 interface DocumentPageProps {
   documentId: Id<"documents">
@@ -23,11 +25,13 @@ export function DocumentPage({ documentId }: DocumentPageProps) {
   const document = useQuery(api.documents.get, { id: documentId })
   const updateDocument = useMutation(api.documents.update)
   const commentCount = useQuery(api.comments.countByDocument, { documentId })
+  const sourcesCount = useQuery(api.sources.countByDocument, { documentId })
 
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("saved")
   const [title, setTitle] = useState("")
   const [editor, setEditor] = useState<Editor | null>(null)
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false)
+  const [isCommentsSidebarOpen, setIsCommentsSidebarOpen] = useState(false)
+  const [isSourcesPanelOpen, setIsSourcesPanelOpen] = useState(false)
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const pendingContentRef = useRef<string | null>(null)
   const titleTimeoutRef = useRef<NodeJS.Timeout | null>(null)
@@ -126,7 +130,7 @@ export function DocumentPage({ documentId }: DocumentPageProps) {
 
   // Open sidebar when a comment is created
   const handleCommentCreated = useCallback(() => {
-    setIsSidebarOpen(true)
+    setIsCommentsSidebarOpen(true)
   }, [])
 
   // Cleanup timeouts on unmount
@@ -179,11 +183,32 @@ export function DocumentPage({ documentId }: DocumentPageProps) {
             placeholder="Untitled"
           />
           <SaveStatusIndicator status={saveStatus} />
+          {/* Sources toggle button */}
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            onClick={() => {
+              setIsSourcesPanelOpen(!isSourcesPanelOpen)
+              if (!isSourcesPanelOpen) setIsCommentsSidebarOpen(false)
+            }}
+            className="relative flex-shrink-0"
+            title="Toggle sources"
+          >
+            <FileText className="h-4 w-4 text-daemon" />
+            {sourcesCount !== undefined && sourcesCount > 0 && (
+              <span className="absolute -top-1 -right-1 bg-daemon text-daemon-foreground text-[10px] font-medium rounded-full min-w-[16px] h-4 flex items-center justify-center px-1">
+                {sourcesCount}
+              </span>
+            )}
+          </Button>
           {/* Comments toggle button */}
           <Button
             variant="ghost"
             size="icon-sm"
-            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+            onClick={() => {
+              setIsCommentsSidebarOpen(!isCommentsSidebarOpen)
+              if (!isCommentsSidebarOpen) setIsSourcesPanelOpen(false)
+            }}
             className="relative flex-shrink-0"
             title="Toggle comments"
           >
@@ -214,12 +239,19 @@ export function DocumentPage({ documentId }: DocumentPageProps) {
         </EditorContextMenu>
       </div>
 
+      {/* Sources panel */}
+      <SourcesPanel
+        documentId={documentId}
+        isOpen={isSourcesPanelOpen}
+        onClose={() => setIsSourcesPanelOpen(false)}
+      />
+
       {/* Comments sidebar */}
       <CommentsSidebar
         documentId={documentId}
         editor={editor}
-        isOpen={isSidebarOpen}
-        onClose={() => setIsSidebarOpen(false)}
+        isOpen={isCommentsSidebarOpen}
+        onClose={() => setIsCommentsSidebarOpen(false)}
       />
     </div>
   )
