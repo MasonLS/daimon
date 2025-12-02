@@ -52,14 +52,14 @@ export default function RootLayout({
               enableSystem
               disableTransitionOnChange
             >
-              <SidebarProvider>
+              <SidebarProvider className="h-svh max-h-svh">
                 <AppSidebar />
-                <SidebarInset>
+                <SidebarInset className="min-h-0 overflow-hidden">
                   {/* Mobile sidebar trigger */}
                   <header className="flex h-12 shrink-0 items-center gap-2 px-4 md:hidden">
                     <SidebarTrigger className="-ml-1" />
                   </header>
-                  <main className="flex flex-1 flex-col">{children}</main>
+                  <div className="flex flex-1 flex-col min-h-0 overflow-hidden">{children}</div>
                 </SidebarInset>
               </SidebarProvider>
             </ThemeProvider>

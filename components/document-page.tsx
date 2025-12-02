@@ -8,12 +8,13 @@ import { SimpleEditor } from "@/components/tiptap-templates/simple/simple-editor
 import { JSONContent, Editor } from "@tiptap/react"
 
 import { Spinner } from "@/components/ui/spinner"
-import { DaimonIcon } from "@/components/icons/daimon-icon"
-import { Button } from "@/components/ui/button"
 import { EditorContextMenu } from "@/components/editor-context-menu"
-import { CommentsSidebar } from "@/components/comments-sidebar"
-import { SourcesPanel } from "@/components/sources-panel"
-import { FileText } from "lucide-react"
+import {
+  RightPanel,
+  RightPanelProvider,
+  RightPanelTrigger,
+  useRightPanel,
+} from "@/components/right-panel"
 
 interface DocumentPageProps {
   documentId: Id<"documents">
@@ -22,16 +23,23 @@ interface DocumentPageProps {
 type SaveStatus = "saved" | "saving" | "unsaved"
 
 export function DocumentPage({ documentId }: DocumentPageProps) {
+  return (
+    <RightPanelProvider>
+      <DocumentPageContent documentId={documentId} />
+    </RightPanelProvider>
+  )
+}
+
+function DocumentPageContent({ documentId }: DocumentPageProps) {
   const document = useQuery(api.documents.get, { id: documentId })
   const updateDocument = useMutation(api.documents.update)
   const commentCount = useQuery(api.comments.countByDocument, { documentId })
   const sourcesCount = useQuery(api.sources.countByDocument, { documentId })
+  const { openToTab } = useRightPanel()
 
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("saved")
   const [title, setTitle] = useState("")
   const [editor, setEditor] = useState<Editor | null>(null)
-  const [isCommentsSidebarOpen, setIsCommentsSidebarOpen] = useState(false)
-  const [isSourcesPanelOpen, setIsSourcesPanelOpen] = useState(false)
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const pendingContentRef = useRef<string | null>(null)
   const titleTimeoutRef = useRef<NodeJS.Timeout | null>(null)
@@ -130,8 +138,8 @@ export function DocumentPage({ documentId }: DocumentPageProps) {
 
   // Open sidebar when a comment is created
   const handleCommentCreated = useCallback(() => {
-    setIsCommentsSidebarOpen(true)
-  }, [])
+    openToTab("comments")
+  }, [openToTab])
 
   // Cleanup timeouts on unmount
   useEffect(() => {
@@ -171,88 +179,47 @@ export function DocumentPage({ documentId }: DocumentPageProps) {
   }
 
   return (
-    <div className="flex flex-1 flex-col bg-background">
-      {/* Document header with title and save status - aligned with toolbar controls */}
-      <div className="flex items-center justify-center w-full px-4 sm:px-6 lg:px-8 pt-6 sm:pt-8 pb-2">
-        <div className="flex items-center gap-3 w-full max-w-[680px]">
-          <input
-            type="text"
-            value={title}
-            onChange={(e) => handleTitleChange(e.target.value)}
-            className="flex-1 font-[family-name:var(--font-display)] text-2xl font-medium bg-transparent border-none outline-none text-foreground placeholder:text-muted-foreground min-w-0"
-            placeholder="Untitled"
-          />
-          <SaveStatusIndicator status={saveStatus} />
-          {/* Sources toggle button */}
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            onClick={() => {
-              setIsSourcesPanelOpen(!isSourcesPanelOpen)
-              if (!isSourcesPanelOpen) setIsCommentsSidebarOpen(false)
-            }}
-            className="relative flex-shrink-0"
-            title="Toggle sources"
+    <div className="flex flex-1 min-h-0 bg-background overflow-hidden">
+      {/* Main content area */}
+      <div className="flex flex-1 flex-col min-w-0 min-h-0">
+        {/* Document header with title and save status */}
+        <div className="flex items-center justify-center w-full px-4 sm:px-6 lg:px-8 pt-6 sm:pt-8 pb-2">
+          <div className="flex items-center gap-3 w-full max-w-[680px]">
+            <input
+              type="text"
+              value={title}
+              onChange={(e) => handleTitleChange(e.target.value)}
+              className="flex-1 font-[family-name:var(--font-display)] text-2xl font-medium bg-transparent border-none outline-none text-foreground placeholder:text-muted-foreground min-w-0"
+              placeholder="Untitled"
+            />
+            <SaveStatusIndicator status={saveStatus} />
+            <RightPanelTrigger
+              commentCount={commentCount ?? 0}
+              sourceCount={sourcesCount ?? 0}
+            />
+          </div>
+        </div>
+
+        {/* Editor with context menu */}
+        <div className="flex flex-1 flex-col min-h-0">
+          <EditorContextMenu
+            editor={editor}
+            documentId={documentId}
+            onCommentCreated={handleCommentCreated}
           >
-            <FileText className="h-4 w-4 text-daemon" />
-            {sourcesCount !== undefined && sourcesCount > 0 && (
-              <span className="absolute -top-1 -right-1 bg-daemon text-daemon-foreground text-[10px] font-medium rounded-full min-w-[16px] h-4 flex items-center justify-center px-1">
-                {sourcesCount}
-              </span>
-            )}
-          </Button>
-          {/* Comments toggle button */}
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            onClick={() => {
-              setIsCommentsSidebarOpen(!isCommentsSidebarOpen)
-              if (!isCommentsSidebarOpen) setIsSourcesPanelOpen(false)
-            }}
-            className="relative flex-shrink-0"
-            title="Toggle comments"
-          >
-            <DaimonIcon className="h-4 w-4 text-daemon" />
-            {commentCount !== undefined && commentCount > 0 && (
-              <span className="absolute -top-1 -right-1 bg-daemon text-daemon-foreground text-[10px] font-medium rounded-full min-w-[16px] h-4 flex items-center justify-center px-1">
-                {commentCount}
-              </span>
-            )}
-          </Button>
+            <div className="flex flex-1 flex-col min-h-0">
+              <SimpleEditor
+                initialContent={initialContent}
+                onUpdate={handleContentUpdate}
+                onEditorReady={setEditor}
+              />
+            </div>
+          </EditorContextMenu>
         </div>
       </div>
 
-      {/* Editor with context menu */}
-      <div className="flex flex-1 flex-col min-h-0">
-        <EditorContextMenu
-          editor={editor}
-          documentId={documentId}
-          onCommentCreated={handleCommentCreated}
-        >
-          <div className="flex flex-1 flex-col min-h-0">
-            <SimpleEditor
-              initialContent={initialContent}
-              onUpdate={handleContentUpdate}
-              onEditorReady={setEditor}
-            />
-          </div>
-        </EditorContextMenu>
-      </div>
-
-      {/* Sources panel */}
-      <SourcesPanel
-        documentId={documentId}
-        isOpen={isSourcesPanelOpen}
-        onClose={() => setIsSourcesPanelOpen(false)}
-      />
-
-      {/* Comments sidebar */}
-      <CommentsSidebar
-        documentId={documentId}
-        editor={editor}
-        isOpen={isCommentsSidebarOpen}
-        onClose={() => setIsCommentsSidebarOpen(false)}
-      />
+      {/* Right panel for Comments/Sources */}
+      <RightPanel documentId={documentId} editor={editor} />
     </div>
   )
 }
