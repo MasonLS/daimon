@@ -20,6 +20,7 @@ export default defineSchema({
     commentId: v.string(), // UUID stored in TipTap mark
     selectedText: v.string(), // The text that was highlighted
     status: v.union(
+      v.literal("awaiting_input"), // Waiting for user's initial message (Add Comment flow)
       v.literal("pending"),
       v.literal("streaming"),
       v.literal("complete"),

@@ -23,6 +23,7 @@ export const listByDocument = query({
       commentId: v.string(),
       selectedText: v.string(),
       status: v.union(
+        v.literal("awaiting_input"),
         v.literal("pending"),
         v.literal("streaming"),
         v.literal("complete"),
@@ -160,6 +161,92 @@ export const create = mutation({
 });
 
 /**
+ * Create a new comment without triggering AI (for "Add Comment" flow)
+ * User will provide their message separately via addInitialMessage
+ */
+export const createWithoutAI = mutation({
+  args: {
+    documentId: v.id("documents"),
+    commentId: v.string(), // UUID from frontend
+    selectedText: v.string(),
+  },
+  returns: v.id("comments"),
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Not authenticated");
+
+    // Verify document ownership
+    const document = await ctx.db.get(args.documentId);
+    if (!document || document.ownerId !== userId) {
+      throw new Error("Document not found");
+    }
+
+    // Create comment in awaiting_input state - NO AI trigger
+    const commentDbId = await ctx.db.insert("comments", {
+      documentId: args.documentId,
+      commentId: args.commentId,
+      selectedText: args.selectedText,
+      status: "awaiting_input",
+      ownerId: userId,
+      createdAt: Date.now(),
+    });
+
+    // NOTE: Do NOT create a message yet - wait for user input
+    // NOTE: Do NOT schedule AI response
+
+    return commentDbId;
+  },
+});
+
+/**
+ * Add the initial user message to a comment and trigger AI response
+ * This is used after createWithoutAI for the "Add Comment" flow
+ */
+export const addInitialMessage = mutation({
+  args: {
+    commentDbId: v.id("comments"),
+    content: v.string(),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Not authenticated");
+
+    const comment = await ctx.db.get(args.commentDbId);
+    if (!comment || comment.ownerId !== userId) {
+      throw new Error("Comment not found");
+    }
+
+    // Verify comment is in awaiting_input state
+    if (comment.status !== "awaiting_input") {
+      throw new Error("Comment already has messages");
+    }
+
+    // Add user's message
+    await ctx.db.insert("commentMessages", {
+      commentId: args.commentDbId,
+      role: "user",
+      content: args.content,
+      createdAt: Date.now(),
+    });
+
+    // Update status to pending
+    await ctx.db.patch(args.commentDbId, { status: "pending" });
+
+    // Schedule AI response - pass user's message for context
+    await ctx.scheduler.runAfter(0, internal.comments.generateInitialResponse, {
+      commentDbId: args.commentDbId,
+      documentId: comment.documentId,
+      selectedText: comment.selectedText,
+      userMessage: args.content,
+      userId,
+    });
+
+    return null;
+  },
+});
+
+/**
  * Add a user reply to a comment thread
  */
 export const addReply = mutation({
@@ -232,6 +319,7 @@ export const updateCommentStatus = internalMutation({
   args: {
     commentDbId: v.id("comments"),
     status: v.union(
+      v.literal("awaiting_input"),
       v.literal("pending"),
       v.literal("streaming"),
       v.literal("complete"),
@@ -312,6 +400,70 @@ export const generateAIResponse = internalAction({
       });
     } catch (error) {
       console.error("Error generating AI response:", error);
+      await ctx.runMutation(internal.comments.updateCommentStatus, {
+        commentDbId: args.commentDbId,
+        status: "error",
+      });
+    }
+
+    return null;
+  },
+});
+
+/**
+ * Generate AI response for a new comment with user's initial message
+ * Different from generateAIResponse because it includes user's question/comment
+ */
+export const generateInitialResponse = internalAction({
+  args: {
+    commentDbId: v.id("comments"),
+    documentId: v.id("documents"),
+    selectedText: v.string(),
+    userMessage: v.string(),
+    userId: v.id("users"),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    try {
+      // Update status to streaming
+      await ctx.runMutation(internal.comments.updateCommentStatus, {
+        commentDbId: args.commentDbId,
+        status: "streaming",
+      });
+
+      // Create a thread for this comment
+      const { threadId } = await daimon.createThread(ctx, {
+        userId: args.userId,
+      });
+
+      // Build prompt that includes both selected text AND user's message
+      const prompt = `[Context: documentId=${args.documentId}]
+
+The writer has highlighted this text:
+"${args.selectedText}"
+
+And asks: ${args.userMessage}`;
+
+      // Generate response from Daimon
+      const result = await daimon.generateText(
+        ctx,
+        { threadId },
+        { prompt }
+      );
+
+      // Save the AI response
+      await ctx.runMutation(internal.comments.saveAIMessage, {
+        commentDbId: args.commentDbId,
+        content: result.text,
+      });
+
+      // Update status to complete
+      await ctx.runMutation(internal.comments.updateCommentStatus, {
+        commentDbId: args.commentDbId,
+        status: "complete",
+      });
+    } catch (error) {
+      console.error("Error generating initial response:", error);
       await ctx.runMutation(internal.comments.updateCommentStatus, {
         commentDbId: args.commentDbId,
         status: "error",

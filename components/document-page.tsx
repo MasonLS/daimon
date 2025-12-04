@@ -35,7 +35,7 @@ function DocumentPageContent({ documentId }: DocumentPageProps) {
   const updateDocument = useMutation(api.documents.update)
   const commentCount = useQuery(api.comments.countByDocument, { documentId })
   const sourcesCount = useQuery(api.sources.countByDocument, { documentId })
-  const { openToTab } = useRightPanel()
+  const { openToTab, setFocusedCommentId } = useRightPanel()
 
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("saved")
   const [title, setTitle] = useState("")
@@ -137,9 +137,12 @@ function DocumentPageContent({ documentId }: DocumentPageProps) {
   )
 
   // Open sidebar when a comment is created
-  const handleCommentCreated = useCallback(() => {
+  const handleCommentCreated = useCallback((commentDbId?: Id<"comments">) => {
     openToTab("comments")
-  }, [openToTab])
+    if (commentDbId) {
+      setFocusedCommentId(commentDbId)
+    }
+  }, [openToTab, setFocusedCommentId])
 
   // Cleanup timeouts on unmount
   useEffect(() => {

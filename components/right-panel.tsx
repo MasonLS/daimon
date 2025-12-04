@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useRef, createContext, useContext } from "react";
+import { useState, useCallback, useRef, createContext, useContext, useEffect } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
@@ -34,6 +34,8 @@ interface RightPanelContextValue {
   setActiveTab: (tab: RightPanelTab) => void;
   toggle: () => void;
   openToTab: (tab: RightPanelTab) => void;
+  focusedCommentId: Id<"comments"> | null;
+  setFocusedCommentId: (id: Id<"comments"> | null) => void;
 }
 
 const RightPanelContext = createContext<RightPanelContextValue | null>(null);
@@ -63,6 +65,7 @@ export function RightPanelProvider({
 }: RightPanelProviderProps) {
   const [isOpen, setIsOpen] = useState(defaultOpen);
   const [activeTab, setActiveTab] = useState<RightPanelTab>(defaultTab);
+  const [focusedCommentId, setFocusedCommentId] = useState<Id<"comments"> | null>(null);
 
   const toggle = useCallback(() => setIsOpen((prev) => !prev), []);
   const openToTab = useCallback((tab: RightPanelTab) => {
@@ -72,7 +75,16 @@ export function RightPanelProvider({
 
   return (
     <RightPanelContext.Provider
-      value={{ isOpen, setIsOpen, activeTab, setActiveTab, toggle, openToTab }}
+      value={{
+        isOpen,
+        setIsOpen,
+        activeTab,
+        setActiveTab,
+        toggle,
+        openToTab,
+        focusedCommentId,
+        setFocusedCommentId,
+      }}
     >
       {children}
     </RightPanelContext.Provider>
@@ -239,7 +251,7 @@ interface Comment {
   documentId: Id<"documents">;
   commentId: string;
   selectedText: string;
-  status: "pending" | "streaming" | "complete" | "error";
+  status: "awaiting_input" | "pending" | "streaming" | "complete" | "error";
   ownerId: Id<"users">;
   createdAt: number;
   resolvedAt?: number;
@@ -284,10 +296,10 @@ function EmptyCommentsState() {
         <DaimonIcon className="h-6 w-6 text-daemon/50" />
       </div>
       <p className="font-[family-name:var(--font-display)] text-base text-foreground/80 mb-1">
-        Summon your Daimon
+        Start a conversation
       </p>
       <p className="text-xs text-muted-foreground max-w-[200px]">
-        Highlight text and right-click to ask your daemon for guidance
+        Highlight text and right-click to add a comment or summon your daemon
       </p>
     </div>
   );
@@ -301,8 +313,21 @@ interface CommentCardProps {
 function CommentCard({ comment, editor }: CommentCardProps) {
   const [replyText, setReplyText] = useState("");
   const [isReplying, setIsReplying] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const { focusedCommentId, setFocusedCommentId } = useRightPanel();
+
   const addReply = useMutation(api.comments.addReply);
+  const addInitialMessage = useMutation(api.comments.addInitialMessage);
   const resolveComment = useMutation(api.comments.resolve);
+
+  // Auto-focus input when this comment is focused
+  useEffect(() => {
+    if (focusedCommentId === comment._id && inputRef.current) {
+      inputRef.current.focus();
+      setFocusedCommentId(null);
+    }
+  }, [focusedCommentId, comment._id, setFocusedCommentId]);
 
   const handleScrollToComment = useCallback(() => {
     if (!editor) return;
@@ -342,6 +367,28 @@ function CommentCard({ comment, editor }: CommentCardProps) {
       setIsReplying(false);
     }
   }, [addReply, comment._id, replyText]);
+
+  // Handle initial message submission for "Add Comment" flow
+  const handleInitialMessage = useCallback(async () => {
+    if (!replyText.trim()) return;
+
+    setIsReplying(true);
+    try {
+      await addInitialMessage({
+        commentDbId: comment._id,
+        content: replyText.trim(),
+      });
+      setReplyText("");
+    } catch (error) {
+      console.error("Failed to add initial message:", error);
+    } finally {
+      setIsReplying(false);
+    }
+  }, [addInitialMessage, comment._id, replyText]);
+
+  // Determine which handler to use based on status
+  const handleSubmit =
+    comment.status === "awaiting_input" ? handleInitialMessage : handleReply;
 
   const handleResolve = useCallback(async () => {
     try {
@@ -385,7 +432,48 @@ function CommentCard({ comment, editor }: CommentCardProps) {
         </blockquote>
       </button>
 
-      {/* Messages */}
+      {/* Initial input for awaiting_input state (Add Comment flow) */}
+      {comment.status === "awaiting_input" && (
+        <div className="px-3 py-3 border-b border-border/30 bg-daemon/5">
+          <p className="text-xs text-daemon mb-2 font-medium">
+            What would you like to ask about this text?
+          </p>
+          <div className="flex gap-2 items-center">
+            <input
+              ref={inputRef}
+              type="text"
+              value={replyText}
+              onChange={(e) => setReplyText(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  handleSubmit();
+                }
+              }}
+              placeholder="Type your question or comment..."
+              className="flex-1 text-sm bg-background border border-border/50 rounded px-2 py-1.5 outline-none focus:border-daemon/50 placeholder:text-muted-foreground/50"
+              disabled={isReplying}
+              autoFocus
+            />
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              onClick={handleSubmit}
+              disabled={!replyText.trim() || isReplying}
+              className="h-7 w-7 shrink-0"
+            >
+              {isReplying ? (
+                <Spinner className="h-3.5 w-3.5" />
+              ) : (
+                <Send className="h-3.5 w-3.5" />
+              )}
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Messages - only show if there are messages */}
+      {comment.messages.length > 0 && (
       <div className="px-3 py-2.5 space-y-2.5">
         {aiMessages.map((message, index) => (
           <div key={message._id}>
@@ -426,6 +514,7 @@ function CommentCard({ comment, editor }: CommentCardProps) {
           </p>
         )}
       </div>
+      )}
 
       {/* Reply input */}
       {comment.status === "complete" && (
