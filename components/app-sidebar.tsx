@@ -4,6 +4,7 @@ import * as React from "react"
 import { useQuery, useMutation } from "convex/react"
 import { useConvexAuth } from "convex/react"
 import { api } from "@/convex/_generated/api"
+import { Id } from "@/convex/_generated/dataModel"
 import { useRouter, usePathname } from "next/navigation"
 import Link from "next/link"
 import {
@@ -16,6 +17,10 @@ import {
   Moon,
   ChevronsUpDown,
   ChevronRight,
+  MoreHorizontal,
+  Archive,
+  Trash2,
+  ArchiveRestore,
 } from "lucide-react"
 import { useAuthActions } from "@convex-dev/auth/react"
 import { useTheme } from "next-themes"
@@ -32,6 +37,7 @@ import {
   SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
+  SidebarMenuAction,
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarRail,
@@ -43,6 +49,21 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible"
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const { isAuthenticated, isLoading: authLoading } = useConvexAuth()
@@ -50,13 +71,26 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     api.documents.list,
     isAuthenticated ? undefined : "skip"
   )
+  const archivedDocuments = useQuery(
+    api.documents.listArchived,
+    isAuthenticated ? undefined : "skip"
+  )
   const createDocument = useMutation(api.documents.create)
+  const archiveDocument = useMutation(api.documents.archive)
+  const restoreDocument = useMutation(api.documents.restore)
+  const removeDocument = useMutation(api.documents.remove)
   const router = useRouter()
   const pathname = usePathname()
   const { signOut } = useAuthActions()
   const { theme, setTheme } = useTheme()
   const [isCreating, setIsCreating] = React.useState(false)
   const [mounted, setMounted] = React.useState(false)
+  const [deleteDialog, setDeleteDialog] = React.useState<{
+    open: boolean
+    docId: Id<"documents"> | null
+    docTitle: string
+  }>({ open: false, docId: null, docTitle: "" })
+  const [archivedOpen, setArchivedOpen] = React.useState(false)
 
   // Avoid hydration mismatch for theme
   React.useEffect(() => {
@@ -78,6 +112,32 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const handleSignOut = async () => {
     await signOut()
     router.push("/signin")
+  }
+
+  const handleArchive = async (docId: Id<"documents">) => {
+    await archiveDocument({ id: docId })
+    // If viewing the archived doc, redirect to home
+    if (pathname === `/${docId}`) {
+      router.push("/")
+    }
+  }
+
+  const handleRestore = async (docId: Id<"documents">) => {
+    await restoreDocument({ id: docId })
+  }
+
+  const handleDelete = async () => {
+    if (!deleteDialog.docId) return
+    await removeDocument({ id: deleteDialog.docId })
+    setDeleteDialog({ open: false, docId: null, docTitle: "" })
+    // If viewing the deleted doc, redirect to home
+    if (pathname === `/${deleteDialog.docId}`) {
+      router.push("/")
+    }
+  }
+
+  const openDeleteDialog = (docId: Id<"documents">, docTitle: string) => {
+    setDeleteDialog({ open: true, docId, docTitle })
   }
 
   return (
@@ -164,11 +224,12 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 documents.slice(0, 10).map((doc) => {
                   const isActive = pathname === `/${doc._id}`
                   return (
-                    <SidebarMenuItem key={doc._id}>
+                    <SidebarMenuItem key={doc._id} className="group/menu-item">
                       <SidebarMenuButton
                         asChild
                         isActive={isActive}
                         tooltip={doc.title || "Untitled"}
+                        className="peer/menu-button"
                       >
                         <Link href={`/${doc._id}`}>
                           <FileText className="size-4 shrink-0" />
@@ -177,6 +238,28 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                           </span>
                         </Link>
                       </SidebarMenuButton>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <SidebarMenuAction showOnHover>
+                            <MoreHorizontal className="size-4" />
+                            <span className="sr-only">More options</span>
+                          </SidebarMenuAction>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent side="right" align="start">
+                          <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleArchive(doc._id); }}>
+                            <Archive className="size-4 mr-2" />
+                            Archive
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            onClick={(e) => { e.stopPropagation(); openDeleteDialog(doc._id, doc.title || "Untitled"); }}
+                            className="text-destructive focus:text-destructive"
+                          >
+                            <Trash2 className="size-4 mr-2" />
+                            Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </SidebarMenuItem>
                   )
                 })
@@ -201,6 +284,70 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
+
+        {/* Archived Documents Group */}
+        {archivedDocuments && archivedDocuments.length > 0 && (
+          <SidebarGroup>
+            <Collapsible open={archivedOpen} onOpenChange={setArchivedOpen}>
+              <CollapsibleTrigger asChild>
+                <SidebarGroupLabel className="cursor-pointer hover:bg-sidebar-accent/50 rounded-md transition-colors">
+                  <ChevronRight
+                    className={`size-3 mr-1 transition-transform ${archivedOpen ? "rotate-90" : ""}`}
+                  />
+                  Archived ({archivedDocuments.length})
+                </SidebarGroupLabel>
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                <SidebarGroupContent>
+                  <SidebarMenu>
+                    {archivedDocuments.map((doc) => {
+                      const isActive = pathname === `/${doc._id}`
+                      return (
+                        <SidebarMenuItem key={doc._id} className="group/menu-item">
+                          <SidebarMenuButton
+                            asChild
+                            isActive={isActive}
+                            tooltip={doc.title || "Untitled"}
+                            className="peer/menu-button text-muted-foreground"
+                          >
+                            <Link href={`/${doc._id}`}>
+                              <FileText className="size-4 shrink-0" />
+                              <span className="truncate">
+                                {doc.title || "Untitled"}
+                              </span>
+                            </Link>
+                          </SidebarMenuButton>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <SidebarMenuAction showOnHover>
+                                <MoreHorizontal className="size-4" />
+                                <span className="sr-only">More options</span>
+                              </SidebarMenuAction>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent side="right" align="start">
+                              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleRestore(doc._id); }}>
+                                <ArchiveRestore className="size-4 mr-2" />
+                                Restore
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem
+                                onClick={(e) => { e.stopPropagation(); openDeleteDialog(doc._id, doc.title || "Untitled"); }}
+                                className="text-destructive focus:text-destructive"
+                              >
+                                <Trash2 className="size-4 mr-2" />
+                                Delete
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </SidebarMenuItem>
+                      )
+                    })}
+                  </SidebarMenu>
+                </SidebarGroupContent>
+              </CollapsibleContent>
+            </Collapsible>
+          </SidebarGroup>
+        )}
       </SidebarContent>
 
       {/* Footer with user menu */}
@@ -275,6 +422,32 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       </SidebarFooter>
 
       <SidebarRail />
+
+      {/* Delete confirmation dialog */}
+      <AlertDialog
+        open={deleteDialog.open}
+        onOpenChange={(open) =>
+          setDeleteDialog((prev) => ({ ...prev, open }))
+        }
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete document?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete &quot;{deleteDialog.docTitle}&quot;. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              className="bg-destructive text-white hover:bg-destructive/90"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Sidebar>
   )
 }

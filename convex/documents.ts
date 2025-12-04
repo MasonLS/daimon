@@ -2,7 +2,7 @@ import { v } from "convex/values";
 import { query, mutation } from "./_generated/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
 
-// List all documents for the current user
+// List all non-archived documents for the current user
 export const list = query({
   args: {},
   returns: v.array(
@@ -25,12 +25,48 @@ export const list = query({
       .order("desc")
       .collect();
 
-    return documents.map((doc) => ({
-      _id: doc._id,
-      _creationTime: doc._creationTime,
-      title: doc.title,
-      updatedAt: doc.updatedAt,
-    }));
+    return documents
+      .filter((doc) => !doc.isArchived)
+      .map((doc) => ({
+        _id: doc._id,
+        _creationTime: doc._creationTime,
+        title: doc.title,
+        updatedAt: doc.updatedAt,
+      }));
+  },
+});
+
+// List all archived documents for the current user
+export const listArchived = query({
+  args: {},
+  returns: v.array(
+    v.object({
+      _id: v.id("documents"),
+      _creationTime: v.number(),
+      title: v.string(),
+      updatedAt: v.number(),
+    })
+  ),
+  handler: async (ctx) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) {
+      return [];
+    }
+
+    const documents = await ctx.db
+      .query("documents")
+      .withIndex("by_ownerId", (q) => q.eq("ownerId", userId))
+      .order("desc")
+      .collect();
+
+    return documents
+      .filter((doc) => doc.isArchived === true)
+      .map((doc) => ({
+        _id: doc._id,
+        _creationTime: doc._creationTime,
+        title: doc.title,
+        updatedAt: doc.updatedAt,
+      }));
   },
 });
 
@@ -45,6 +81,7 @@ export const get = query({
       content: v.string(),
       ownerId: v.id("users"),
       updatedAt: v.number(),
+      isArchived: v.optional(v.boolean()),
     }),
     v.null()
   ),
@@ -139,6 +176,46 @@ export const remove = mutation({
     }
 
     await ctx.db.delete(args.id);
+    return null;
+  },
+});
+
+// Archive a document
+export const archive = mutation({
+  args: { id: v.id("documents") },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) {
+      throw new Error("Not authenticated");
+    }
+
+    const document = await ctx.db.get(args.id);
+    if (!document || document.ownerId !== userId) {
+      throw new Error("Document not found or access denied");
+    }
+
+    await ctx.db.patch(args.id, { isArchived: true });
+    return null;
+  },
+});
+
+// Restore an archived document
+export const restore = mutation({
+  args: { id: v.id("documents") },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) {
+      throw new Error("Not authenticated");
+    }
+
+    const document = await ctx.db.get(args.id);
+    if (!document || document.ownerId !== userId) {
+      throw new Error("Document not found or access denied");
+    }
+
+    await ctx.db.patch(args.id, { isArchived: false });
     return null;
   },
 });

@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { useState } from "react"
 import { Id } from "@/convex/_generated/dataModel"
-import { Plus, Trash2, PenSquare } from "lucide-react"
+import { Plus, Trash2, PenSquare, MoreHorizontal, Archive } from "lucide-react"
 import { DaimonIcon } from "@/components/icons/daimon-icon"
 
 import { Button } from "@/components/ui/button"
@@ -23,16 +23,28 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 
 export default function DocumentsPage() {
   const { isAuthenticated, isLoading } = useConvexAuth()
   const documents = useQuery(api.documents.list)
   const createDocument = useMutation(api.documents.create)
+  const archiveDocument = useMutation(api.documents.archive)
   const removeDocument = useMutation(api.documents.remove)
   const router = useRouter()
   const [isCreating, setIsCreating] = useState(false)
+  const [deleteDialog, setDeleteDialog] = useState<{
+    open: boolean
+    docId: Id<"documents"> | null
+    docTitle: string
+  }>({ open: false, docId: null, docTitle: "" })
 
   // Show loading state
   if (isLoading) {
@@ -75,12 +87,26 @@ export default function DocumentsPage() {
     }
   }
 
-  const handleDeleteDocument = async (id: Id<"documents">) => {
+  const handleArchiveDocument = async (id: Id<"documents">) => {
     try {
-      await removeDocument({ id })
+      await archiveDocument({ id })
+    } catch (error) {
+      console.error("Failed to archive document:", error)
+    }
+  }
+
+  const handleDeleteDocument = async () => {
+    if (!deleteDialog.docId) return
+    try {
+      await removeDocument({ id: deleteDialog.docId })
+      setDeleteDialog({ open: false, docId: null, docTitle: "" })
     } catch (error) {
       console.error("Failed to delete document:", error)
     }
+  }
+
+  const openDeleteDialog = (docId: Id<"documents">, docTitle: string) => {
+    setDeleteDialog({ open: true, docId, docTitle })
   }
 
   const formatDate = (timestamp: number) => {
@@ -92,6 +118,7 @@ export default function DocumentsPage() {
   }
 
   return (
+    <>
     <div className="flex-1 bg-background">
       {/* Page header */}
       <div className="bg-background/50">
@@ -180,35 +207,32 @@ export default function DocumentsPage() {
                           {formatDate(doc.updatedAt)}
                         </p>
                       </div>
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all duration-200"
+                            className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-foreground hover:bg-muted transition-all duration-200"
                             onClick={(e) => e.preventDefault()}
                           >
-                            <Trash2 className="w-4 h-4" />
+                            <MoreHorizontal className="w-4 h-4" />
                           </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Delete document?</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              This will permanently delete &ldquo;{doc.title || "Untitled"}&rdquo;. This action cannot be undone.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction
-                              onClick={() => handleDeleteDocument(doc._id)}
-                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                            >
-                              Delete
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleArchiveDocument(doc._id); }}>
+                            <Archive className="w-4 h-4 mr-2" />
+                            Archive
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            onClick={(e) => { e.stopPropagation(); openDeleteDialog(doc._id, doc.title || "Untitled"); }}
+                            className="text-destructive focus:text-destructive"
+                          >
+                            <Trash2 className="w-4 h-4 mr-2" />
+                            Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
                   </CardContent>
                 </Link>
@@ -217,6 +241,31 @@ export default function DocumentsPage() {
           </div>
         )}
       </div>
+
+      {/* Delete confirmation dialog */}
+      <AlertDialog
+        open={deleteDialog.open}
+        onOpenChange={(open) => setDeleteDialog((prev) => ({ ...prev, open }))}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete document?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete &quot;{deleteDialog.docTitle}&quot;. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteDocument}
+              className="bg-destructive text-white hover:bg-destructive/90"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
+    </>
   )
 }

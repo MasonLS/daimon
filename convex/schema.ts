@@ -12,6 +12,7 @@ export default defineSchema({
     content: v.string(), // JSON-stringified TipTap content
     ownerId: v.id("users"),
     updatedAt: v.number(),
+    isArchived: v.optional(v.boolean()),
   }).index("by_ownerId", ["ownerId"]),
 
   // Comments for AI-powered feedback
