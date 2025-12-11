@@ -18,6 +18,10 @@ import {
   Send,
   Check,
   MessageSquare,
+  Link,
+  FileType,
+  Globe,
+  X,
 } from "lucide-react";
 import { DaimonIcon } from "@/components/icons/daimon-icon";
 
@@ -585,8 +589,10 @@ const ACCEPTED_FILE_TYPES = [
 interface Source {
   _id: Id<"sources">;
   _creationTime: number;
-  filename: string;
-  mimeType: string;
+  sourceType: "file" | "web" | "text";
+  title: string;
+  url?: string;
+  mimeType?: string;
   status: "uploading" | "processing" | "indexed" | "error";
   errorMessage?: string;
   createdAt: number;
@@ -597,13 +603,37 @@ interface SourcesContentProps {
   sources: Source[] | undefined;
 }
 
+type AddSourceMode = "none" | "file" | "url" | "text";
+
 function SourcesContent({ documentId, sources }: SourcesContentProps) {
-  const [isUploading, setIsUploading] = useState(false);
-  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [addMode, setAddMode] = useState<AddSourceMode>("none");
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // URL input state
+  const [urlInput, setUrlInput] = useState("");
+
+  // Text input state
+  const [textTitle, setTextTitle] = useState("");
+  const [textContent, setTextContent] = useState("");
+
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const generateUploadUrl = useMutation(api.sources.generateUploadUrl);
-  const createSource = useMutation(api.sources.create);
+  const createFileSource = useMutation(api.sources.createFileSource);
+  const createWebSource = useMutation(api.sources.createWebSource);
+  const createTextSource = useMutation(api.sources.createTextSource);
+
+  const resetForm = useCallback(() => {
+    setAddMode("none");
+    setError(null);
+    setUrlInput("");
+    setTextTitle("");
+    setTextContent("");
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  }, []);
 
   const handleFileSelect = useCallback(
     async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -615,18 +645,18 @@ function SourcesContent({ documentId, sources }: SourcesContentProps) {
       );
 
       if (!isValidType) {
-        setUploadError("Invalid file type. Accepts .txt, .md, .pdf, .docx");
+        setError("Invalid file type. Accepts .txt, .md, .pdf, .docx");
         return;
       }
 
       const maxSize = 10 * 1024 * 1024;
       if (file.size > maxSize) {
-        setUploadError("File too large. Maximum size is 10MB.");
+        setError("File too large. Maximum size is 10MB.");
         return;
       }
 
-      setIsUploading(true);
-      setUploadError(null);
+      setIsProcessing(true);
+      setError(null);
 
       try {
         const extractedText = await extractTextFromFile(file);
@@ -649,31 +679,72 @@ function SourcesContent({ documentId, sources }: SourcesContentProps) {
 
         const { storageId } = await result.json();
 
-        await createSource({
+        await createFileSource({
           documentId,
           filename: file.name,
           storageId,
           mimeType: file.type || "application/octet-stream",
           extractedText,
         });
-      } catch (error) {
-        console.error("Upload failed:", error);
-        setUploadError(
-          error instanceof Error ? error.message : "Failed to upload file"
-        );
+
+        resetForm();
+      } catch (err) {
+        console.error("Upload failed:", err);
+        setError(err instanceof Error ? err.message : "Failed to upload file");
       } finally {
-        setIsUploading(false);
+        setIsProcessing(false);
         if (fileInputRef.current) {
           fileInputRef.current.value = "";
         }
       }
     },
-    [documentId, generateUploadUrl, createSource]
+    [documentId, generateUploadUrl, createFileSource, resetForm]
   );
+
+  const handleUrlSubmit = useCallback(async () => {
+    if (!urlInput.trim()) return;
+
+    setIsProcessing(true);
+    setError(null);
+
+    try {
+      await createWebSource({
+        documentId,
+        url: urlInput.trim(),
+      });
+      resetForm();
+    } catch (err) {
+      console.error("Failed to add URL:", err);
+      setError(err instanceof Error ? err.message : "Failed to add URL");
+    } finally {
+      setIsProcessing(false);
+    }
+  }, [documentId, urlInput, createWebSource, resetForm]);
+
+  const handleTextSubmit = useCallback(async () => {
+    if (!textContent.trim()) return;
+
+    setIsProcessing(true);
+    setError(null);
+
+    try {
+      await createTextSource({
+        documentId,
+        title: textTitle.trim() || "Pasted text",
+        text: textContent.trim(),
+      });
+      resetForm();
+    } catch (err) {
+      console.error("Failed to add text:", err);
+      setError(err instanceof Error ? err.message : "Failed to add text");
+    } finally {
+      setIsProcessing(false);
+    }
+  }, [documentId, textTitle, textContent, createTextSource, resetForm]);
 
   return (
     <div className="flex flex-col flex-1 min-h-0">
-      {/* Upload section */}
+      {/* Add source section */}
       <div className="px-3 py-3 border-b border-border/30">
         <input
           ref={fileInputRef}
@@ -681,42 +752,140 @@ function SourcesContent({ documentId, sources }: SourcesContentProps) {
           accept={ACCEPTED_FILE_TYPES.join(",")}
           onChange={handleFileSelect}
           className="hidden"
-          disabled={isUploading}
+          disabled={isProcessing}
         />
-        <button
-          onClick={() => fileInputRef.current?.click()}
-          disabled={isUploading}
-          className={cn(
-            "w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg border-2 border-dashed transition-all",
-            isUploading
-              ? "border-daemon/30 bg-daemon/5 cursor-wait"
-              : "border-border/50 hover:border-daemon/40 hover:bg-daemon/5 cursor-pointer"
-          )}
-        >
-          {isUploading ? (
-            <>
-              <Spinner className="h-4 w-4 text-daemon" />
-              <span className="text-xs font-medium text-daemon">
-                Uploading...
-              </span>
-            </>
-          ) : (
-            <>
-              <Upload className="h-4 w-4 text-muted-foreground" />
-              <span className="text-xs font-medium text-muted-foreground">
-                Add research source
-              </span>
-            </>
-          )}
-        </button>
-        {uploadError && (
+
+        {addMode === "none" ? (
+          <>
+            {/* Source type buttons */}
+            <div className="flex gap-2">
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isProcessing}
+                className="flex-1 flex flex-col items-center gap-1.5 px-3 py-2.5 rounded-lg border border-border/50 hover:border-daemon/40 hover:bg-daemon/5 transition-all"
+              >
+                <Upload className="h-4 w-4 text-muted-foreground" />
+                <span className="text-[10px] font-medium text-muted-foreground">File</span>
+              </button>
+              <button
+                onClick={() => setAddMode("url")}
+                disabled={isProcessing}
+                className="flex-1 flex flex-col items-center gap-1.5 px-3 py-2.5 rounded-lg border border-border/50 hover:border-daemon/40 hover:bg-daemon/5 transition-all"
+              >
+                <Globe className="h-4 w-4 text-muted-foreground" />
+                <span className="text-[10px] font-medium text-muted-foreground">URL</span>
+              </button>
+              <button
+                onClick={() => setAddMode("text")}
+                disabled={isProcessing}
+                className="flex-1 flex flex-col items-center gap-1.5 px-3 py-2.5 rounded-lg border border-border/50 hover:border-daemon/40 hover:bg-daemon/5 transition-all"
+              >
+                <FileType className="h-4 w-4 text-muted-foreground" />
+                <span className="text-[10px] font-medium text-muted-foreground">Text</span>
+              </button>
+            </div>
+          </>
+        ) : addMode === "url" ? (
+          /* URL input form */
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-medium text-foreground">Add webpage</span>
+              <button
+                onClick={resetForm}
+                className="p-1 rounded hover:bg-muted/50 text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            </div>
+            <input
+              type="url"
+              value={urlInput}
+              onChange={(e) => setUrlInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  handleUrlSubmit();
+                }
+              }}
+              placeholder="https://example.com/article"
+              className="w-full text-sm bg-background border border-border/50 rounded px-2.5 py-1.5 outline-none focus:border-daemon/50 placeholder:text-muted-foreground/50"
+              disabled={isProcessing}
+              autoFocus
+            />
+            <Button
+              onClick={handleUrlSubmit}
+              disabled={!urlInput.trim() || isProcessing}
+              className="w-full"
+              size="sm"
+            >
+              {isProcessing ? (
+                <>
+                  <Spinner className="h-3.5 w-3.5 mr-2" />
+                  Scraping...
+                </>
+              ) : (
+                <>
+                  <Link className="h-3.5 w-3.5 mr-2" />
+                  Add URL
+                </>
+              )}
+            </Button>
+          </div>
+        ) : (
+          /* Text input form */
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-medium text-foreground">Add text</span>
+              <button
+                onClick={resetForm}
+                className="p-1 rounded hover:bg-muted/50 text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            </div>
+            <input
+              type="text"
+              value={textTitle}
+              onChange={(e) => setTextTitle(e.target.value)}
+              placeholder="Title (optional)"
+              className="w-full text-sm bg-background border border-border/50 rounded px-2.5 py-1.5 outline-none focus:border-daemon/50 placeholder:text-muted-foreground/50"
+              disabled={isProcessing}
+              autoFocus
+            />
+            <textarea
+              value={textContent}
+              onChange={(e) => setTextContent(e.target.value)}
+              placeholder="Paste your text here..."
+              rows={4}
+              className="w-full text-sm bg-background border border-border/50 rounded px-2.5 py-1.5 outline-none focus:border-daemon/50 placeholder:text-muted-foreground/50 resize-none"
+              disabled={isProcessing}
+            />
+            <Button
+              onClick={handleTextSubmit}
+              disabled={!textContent.trim() || isProcessing}
+              className="w-full"
+              size="sm"
+            >
+              {isProcessing ? (
+                <>
+                  <Spinner className="h-3.5 w-3.5 mr-2" />
+                  Processing...
+                </>
+              ) : (
+                <>
+                  <FileType className="h-3.5 w-3.5 mr-2" />
+                  Add Text
+                </>
+              )}
+            </Button>
+          </div>
+        )}
+
+        {error && (
           <p className="text-xs text-destructive mt-2 text-center">
-            {uploadError}
+            {error}
           </p>
         )}
-        <p className="text-[10px] text-muted-foreground/70 mt-2 text-center">
-          .txt, .md, .pdf, .docx — max 10MB
-        </p>
       </div>
 
       {/* Sources list */}
@@ -790,28 +959,62 @@ function SourceCard({ source }: SourceCardProps) {
     }
   };
 
-  const getFileExtension = () => {
-    const ext = source.filename.split(".").pop()?.toUpperCase();
-    return ext || "FILE";
+  const getSourceBadge = () => {
+    switch (source.sourceType) {
+      case "file":
+        const ext = source.title.split(".").pop()?.toUpperCase();
+        return ext || "FILE";
+      case "web":
+        return "WEB";
+      case "text":
+        return "TXT";
+      default:
+        return "SRC";
+    }
+  };
+
+  const getSourceIcon = () => {
+    switch (source.sourceType) {
+      case "file":
+        return <FileText className="h-3.5 w-3.5 text-daemon" />;
+      case "web":
+        return <Globe className="h-3.5 w-3.5 text-daemon" />;
+      case "text":
+        return <FileType className="h-3.5 w-3.5 text-daemon" />;
+      default:
+        return <FileText className="h-3.5 w-3.5 text-daemon" />;
+    }
   };
 
   return (
     <div className="flex items-center gap-2.5 p-2 rounded-lg border border-border/40 bg-background/50 group hover:border-daemon/30 transition-colors">
-      {/* File type badge */}
+      {/* Source type badge */}
       <div className="shrink-0 w-8 h-8 rounded bg-daemon/10 flex items-center justify-center">
-        <span className="text-[9px] font-bold text-daemon tracking-tight">
-          {getFileExtension()}
-        </span>
+        {source.sourceType === "file" ? (
+          <span className="text-[9px] font-bold text-daemon tracking-tight">
+            {getSourceBadge()}
+          </span>
+        ) : (
+          getSourceIcon()
+        )}
       </div>
 
-      {/* File info */}
+      {/* Source info */}
       <div className="flex-1 min-w-0">
         <p
           className="text-xs font-medium truncate text-foreground/90"
-          title={source.filename}
+          title={source.title}
         >
-          {source.filename}
+          {source.title}
         </p>
+        {source.url && (
+          <p
+            className="text-[10px] text-muted-foreground truncate"
+            title={source.url}
+          >
+            {new URL(source.url).hostname}
+          </p>
+        )}
         <div className="flex items-center gap-1 mt-0.5">
           {getStatusIcon()}
           <span
@@ -827,7 +1030,7 @@ function SourceCard({ source }: SourceCardProps) {
             {source.status === "indexed"
               ? "Ready"
               : source.status === "error"
-                ? "Error"
+                ? source.errorMessage || "Error"
                 : "Processing..."}
           </span>
         </div>

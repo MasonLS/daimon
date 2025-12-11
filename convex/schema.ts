@@ -42,12 +42,26 @@ export default defineSchema({
     createdAt: v.number(),
   }).index("by_commentId", ["commentId"]),
 
-  // Sources (file attachments) for documents - RAG indexed
+  // Sources for documents - RAG indexed
+  // Supports file uploads, web links, and pasted text
   sources: defineTable({
     documentId: v.id("documents"),
-    filename: v.string(),
-    storageId: v.id("_storage"),
-    mimeType: v.string(),
+    // Source type discriminator (optional for backwards compatibility with existing file sources)
+    sourceType: v.optional(v.union(
+      v.literal("file"), // Uploaded file
+      v.literal("web"), // Web link scraped via Firecrawl
+      v.literal("text") // Pasted text
+    )),
+    // Display name (filename, page title, or user-provided title)
+    // Legacy sources use 'filename' field instead
+    title: v.optional(v.string()),
+    filename: v.optional(v.string()), // Legacy field, kept for backwards compatibility
+    // For file sources
+    storageId: v.optional(v.id("_storage")),
+    mimeType: v.optional(v.string()),
+    // For web sources
+    url: v.optional(v.string()),
+    // Status tracking
     status: v.union(
       v.literal("uploading"),
       v.literal("processing"),
