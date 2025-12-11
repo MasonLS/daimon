@@ -3,12 +3,12 @@
 import { useQuery, useMutation } from "convex/react"
 import { useConvexAuth } from "convex/react"
 import { api } from "@/convex/_generated/api"
-import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { useState } from "react"
 import { Id } from "@/convex/_generated/dataModel"
 import { Plus, Trash2, PenSquare, MoreHorizontal, Archive } from "lucide-react"
 import { DaimonIcon } from "@/components/icons/daimon-icon"
+import { NewDocumentModal } from "@/components/new-document-modal"
 
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -35,11 +35,8 @@ import {
 export default function DocumentsPage() {
   const { isAuthenticated, isLoading } = useConvexAuth()
   const documents = useQuery(api.documents.list)
-  const createDocument = useMutation(api.documents.create)
   const archiveDocument = useMutation(api.documents.archive)
   const removeDocument = useMutation(api.documents.remove)
-  const router = useRouter()
-  const [isCreating, setIsCreating] = useState(false)
   const [deleteDialog, setDeleteDialog] = useState<{
     open: boolean
     docId: Id<"documents"> | null
@@ -74,17 +71,6 @@ export default function DocumentsPage() {
         </div>
       </div>
     )
-  }
-
-  const handleCreateDocument = async () => {
-    setIsCreating(true)
-    try {
-      const documentId = await createDocument({ title: "Untitled" })
-      router.push(`/${documentId}`)
-    } catch (error) {
-      console.error("Failed to create document:", error)
-      setIsCreating(false)
-    }
   }
 
   const handleArchiveDocument = async (id: Id<"documents">) => {
@@ -132,23 +118,12 @@ export default function DocumentsPage() {
                 {documents?.length || 0} {documents?.length === 1 ? 'piece' : 'pieces'}
               </p>
             </div>
-            <Button
-              onClick={handleCreateDocument}
-              disabled={isCreating}
-              className="bg-daemon hover:bg-daemon/90 text-daemon-foreground"
-            >
-              {isCreating ? (
-                <>
-                  <Spinner className="w-4 h-4" />
-                  <span>Creating...</span>
-                </>
-              ) : (
-                <>
-                  <Plus className="w-4 h-4" />
-                  <span>New Piece</span>
-                </>
-              )}
-            </Button>
+            <NewDocumentModal>
+              <Button className="bg-daemon hover:bg-daemon/90 text-daemon-foreground">
+                <Plus className="w-4 h-4" />
+                <span>New Piece</span>
+              </Button>
+            </NewDocumentModal>
           </div>
         </div>
       </div>
@@ -179,14 +154,14 @@ export default function DocumentsPage() {
             <p className="text-muted-foreground mb-8 leading-relaxed">
               Your daimon awaits to whisper ideas and connections as you write.
             </p>
-            <Button
-              onClick={handleCreateDocument}
-              disabled={isCreating}
-              size="lg"
-              className="bg-daemon hover:bg-daemon/90 text-daemon-foreground"
-            >
-              Start Writing
-            </Button>
+            <NewDocumentModal>
+              <Button
+                size="lg"
+                className="bg-daemon hover:bg-daemon/90 text-daemon-foreground"
+              >
+                Start Writing
+              </Button>
+            </NewDocumentModal>
           </div>
         ) : (
           // Document list

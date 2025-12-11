@@ -27,6 +27,7 @@ import { useTheme } from "next-themes"
 
 import { DaimonIcon } from "@/components/icons/daimon-icon"
 import { Spinner } from "@/components/ui/spinner"
+import { NewDocumentModal } from "@/components/new-document-modal"
 import {
   Sidebar,
   SidebarContent,
@@ -75,7 +76,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     api.documents.listArchived,
     isAuthenticated ? undefined : "skip"
   )
-  const createDocument = useMutation(api.documents.create)
   const archiveDocument = useMutation(api.documents.archive)
   const restoreDocument = useMutation(api.documents.restore)
   const removeDocument = useMutation(api.documents.remove)
@@ -83,7 +83,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const pathname = usePathname()
   const { signOut } = useAuthActions()
   const { theme, setTheme } = useTheme()
-  const [isCreating, setIsCreating] = React.useState(false)
   const [mounted, setMounted] = React.useState(false)
   const [deleteDialog, setDeleteDialog] = React.useState<{
     open: boolean
@@ -96,18 +95,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   React.useEffect(() => {
     setMounted(true)
   }, [])
-
-  const handleCreateDocument = async () => {
-    setIsCreating(true)
-    try {
-      const documentId = await createDocument({ title: "Untitled" })
-      router.push(`/${documentId}`)
-    } catch (error) {
-      console.error("Failed to create document:", error)
-    } finally {
-      setIsCreating(false)
-    }
-  }
 
   const handleSignOut = async () => {
     await signOut()
@@ -175,17 +162,13 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           <SidebarGroupLabel>
             Writings
           </SidebarGroupLabel>
-          <SidebarGroupAction
-            onClick={handleCreateDocument}
-            disabled={isCreating || !isAuthenticated}
-            title="New piece"
-          >
-            {isCreating ? (
-              <Spinner className="size-3.5" />
-            ) : (
-              <Plus className="size-4" />
-            )}
-          </SidebarGroupAction>
+          {isAuthenticated && (
+            <NewDocumentModal>
+              <SidebarGroupAction title="New piece">
+                <Plus className="size-4" />
+              </SidebarGroupAction>
+            </NewDocumentModal>
+          )}
           <SidebarGroupContent>
             <SidebarMenu>
               {authLoading ? (

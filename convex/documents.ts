@@ -220,3 +220,118 @@ export const restore = mutation({
   },
 });
 
+// Validator for preset settings (matches documentSettings structure)
+const presetSettingsValidator = v.object({
+  model: v.string(),
+  provider: v.union(v.literal("anthropic"), v.literal("openai")),
+  temperature: v.number(),
+  maxSteps: v.number(),
+  systemPrompt: v.string(),
+  description: v.string(),
+  tools: v.object({
+    searchSources: v.boolean(),
+    webSearch: v.boolean(),
+    citation: v.boolean(),
+  }),
+});
+
+// Create a document with optional preset settings
+export const createWithPreset = mutation({
+  args: {
+    title: v.string(),
+    content: v.optional(v.string()),
+    preset: v.union(presetSettingsValidator, v.null()),
+  },
+  returns: v.id("documents"),
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) {
+      throw new Error("Not authenticated");
+    }
+
+    const now = Date.now();
+
+    // Create the document
+    const documentId = await ctx.db.insert("documents", {
+      title: args.title,
+      content: args.content ?? JSON.stringify({ type: "doc", content: [] }),
+      ownerId: userId,
+      updatedAt: now,
+    });
+
+    // If preset provided, create document settings
+    if (args.preset) {
+      await ctx.db.insert("documentSettings", {
+        documentId,
+        ownerId: userId,
+        model: args.preset.model,
+        provider: args.preset.provider,
+        temperature: args.preset.temperature,
+        maxSteps: args.preset.maxSteps,
+        systemPrompt: args.preset.systemPrompt,
+        description: args.preset.description,
+        tools: args.preset.tools,
+        updatedAt: now,
+      });
+    }
+
+    return documentId;
+  },
+});
+
+// Create a document with settings copied from another document
+export const createWithCopy = mutation({
+  args: {
+    title: v.string(),
+    content: v.optional(v.string()),
+    sourceDocumentId: v.id("documents"),
+  },
+  returns: v.id("documents"),
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) {
+      throw new Error("Not authenticated");
+    }
+
+    // Verify source document ownership
+    const sourceDoc = await ctx.db.get(args.sourceDocumentId);
+    if (!sourceDoc || sourceDoc.ownerId !== userId) {
+      throw new Error("Source document not found or access denied");
+    }
+
+    const now = Date.now();
+
+    // Create the document
+    const documentId = await ctx.db.insert("documents", {
+      title: args.title,
+      content: args.content ?? JSON.stringify({ type: "doc", content: [] }),
+      ownerId: userId,
+      updatedAt: now,
+    });
+
+    // Get source settings (if any)
+    const sourceSettings = await ctx.db
+      .query("documentSettings")
+      .withIndex("by_documentId", (q) => q.eq("documentId", args.sourceDocumentId))
+      .first();
+
+    // Copy settings if source has them
+    if (sourceSettings) {
+      await ctx.db.insert("documentSettings", {
+        documentId,
+        ownerId: userId,
+        model: sourceSettings.model,
+        provider: sourceSettings.provider,
+        temperature: sourceSettings.temperature,
+        maxSteps: sourceSettings.maxSteps,
+        systemPrompt: sourceSettings.systemPrompt,
+        description: sourceSettings.description,
+        tools: sourceSettings.tools,
+        updatedAt: now,
+      });
+    }
+
+    return documentId;
+  },
+});
+
