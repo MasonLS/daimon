@@ -11,6 +11,7 @@
 import type * as aiAgent from "../aiAgent.js";
 import type * as auth from "../auth.js";
 import type * as comments from "../comments.js";
+import type * as documentSettings from "../documentSettings.js";
 import type * as documents from "../documents.js";
 import type * as http from "../http.js";
 import type * as rag from "../rag.js";
@@ -27,6 +28,7 @@ declare const fullApi: ApiFromModules<{
   aiAgent: typeof aiAgent;
   auth: typeof auth;
   comments: typeof comments;
+  documentSettings: typeof documentSettings;
   documents: typeof documents;
   http: typeof http;
   rag: typeof rag;

@@ -2,7 +2,7 @@ import { v } from "convex/values";
 import { mutation, query, internalMutation, internalAction, internalQuery } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { getAuthUserId } from "@convex-dev/auth/server";
-import { daimon } from "./aiAgent";
+import { createDaimonAgent } from "./aiAgent";
 
 // ============================================================================
 // Queries
@@ -373,13 +373,21 @@ export const generateAIResponse = internalAction({
         status: "streaming",
       });
 
+      // Fetch document settings to create configured agent
+      const settings = await ctx.runQuery(internal.documentSettings.getInternal, {
+        documentId: args.documentId,
+      });
+
+      // Create a dynamic agent based on document settings
+      const agent = createDaimonAgent(settings);
+
       // Create a thread for this comment
-      const { threadId } = await daimon.createThread(ctx, {
+      const { threadId } = await agent.createThread(ctx, {
         userId: args.userId,
       });
 
       // Generate response from Daimon, including documentId in context for the search tool
-      const result = await daimon.generateText(
+      const result = await agent.generateText(
         ctx,
         { threadId },
         {
@@ -431,8 +439,16 @@ export const generateInitialResponse = internalAction({
         status: "streaming",
       });
 
+      // Fetch document settings to create configured agent
+      const settings = await ctx.runQuery(internal.documentSettings.getInternal, {
+        documentId: args.documentId,
+      });
+
+      // Create a dynamic agent based on document settings
+      const agent = createDaimonAgent(settings);
+
       // Create a thread for this comment
-      const { threadId } = await daimon.createThread(ctx, {
+      const { threadId } = await agent.createThread(ctx, {
         userId: args.userId,
       });
 
@@ -445,7 +461,7 @@ The writer has highlighted this text:
 And asks: ${args.userMessage}`;
 
       // Generate response from Daimon
-      const result = await daimon.generateText(
+      const result = await agent.generateText(
         ctx,
         { threadId },
         { prompt }
@@ -492,6 +508,14 @@ export const generateReply = internalAction({
         status: "streaming",
       });
 
+      // Fetch document settings to create configured agent
+      const settings = await ctx.runQuery(internal.documentSettings.getInternal, {
+        documentId: args.documentId,
+      });
+
+      // Create a dynamic agent based on document settings
+      const agent = createDaimonAgent(settings);
+
       // Get all messages for this comment to build context
       const comment = await ctx.runQuery(internal.comments.getCommentWithMessages, {
         commentDbId: args.commentDbId,
@@ -502,7 +526,7 @@ export const generateReply = internalAction({
       }
 
       // Create a new thread (we don't persist thread IDs, so each reply is fresh but with context)
-      const { threadId } = await daimon.createThread(ctx, {
+      const { threadId } = await agent.createThread(ctx, {
         userId: args.userId,
       });
 
@@ -514,7 +538,7 @@ export const generateReply = internalAction({
       const prompt = `[Context: documentId=${args.documentId}]\n\nPrevious conversation about highlighted text "${comment.selectedText}":\n\n${conversationContext}\n\nContinue the conversation as Daimon, responding to the writer's latest message.`;
 
       // Generate response from Daimon
-      const result = await daimon.generateText(
+      const result = await agent.generateText(
         ctx,
         { threadId },
         {

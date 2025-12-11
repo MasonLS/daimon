@@ -15,6 +15,7 @@ import {
   RightPanelTrigger,
   useRightPanel,
 } from "@/components/right-panel"
+import { DocumentSettingsModal } from "@/components/document-settings-modal"
 
 interface DocumentPageProps {
   documentId: Id<"documents">
@@ -35,7 +36,7 @@ function DocumentPageContent({ documentId }: DocumentPageProps) {
   const updateDocument = useMutation(api.documents.update)
   const commentCount = useQuery(api.comments.countByDocument, { documentId })
   const sourcesCount = useQuery(api.sources.countByDocument, { documentId })
-  const { openToTab, setFocusedCommentId } = useRightPanel()
+  const { open, setFocusedCommentId } = useRightPanel()
 
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("saved")
   const [title, setTitle] = useState("")
@@ -138,11 +139,11 @@ function DocumentPageContent({ documentId }: DocumentPageProps) {
 
   // Open sidebar when a comment is created
   const handleCommentCreated = useCallback((commentDbId?: Id<"comments">) => {
-    openToTab("comments")
+    open()
     if (commentDbId) {
       setFocusedCommentId(commentDbId)
     }
-  }, [openToTab, setFocusedCommentId])
+  }, [open, setFocusedCommentId])
 
   // Cleanup timeouts on unmount
   useEffect(() => {
@@ -196,6 +197,7 @@ function DocumentPageContent({ documentId }: DocumentPageProps) {
               placeholder="Untitled"
             />
             <SaveStatusIndicator status={saveStatus} />
+            <DocumentSettingsModal documentId={documentId} />
             <RightPanelTrigger
               commentCount={commentCount ?? 0}
               sourceCount={sourcesCount ?? 0}

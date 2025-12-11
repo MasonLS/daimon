@@ -75,4 +75,33 @@ export default defineSchema({
   })
     .index("by_documentId", ["documentId"])
     .index("by_storageId", ["storageId"]),
+
+  // Document-level AI settings
+  documentSettings: defineTable({
+    documentId: v.id("documents"),
+    ownerId: v.id("users"),
+
+    // Model configuration
+    model: v.string(), // e.g., "claude-sonnet-4-20250514", "gpt-5"
+    provider: v.union(v.literal("anthropic"), v.literal("openai")),
+    temperature: v.number(), // 0.0 - 2.0
+    maxSteps: v.number(), // 1-10
+
+    // System prompt configuration
+    systemPrompt: v.string(),
+
+    // Document context for AI
+    description: v.optional(v.string()), // Brief description of document/audience
+
+    // Tool configuration
+    tools: v.object({
+      searchSources: v.boolean(),
+      webSearch: v.boolean(),
+      citation: v.boolean(),
+    }),
+
+    updatedAt: v.number(),
+  })
+    .index("by_documentId", ["documentId"])
+    .index("by_ownerId", ["ownerId"]),
 });
