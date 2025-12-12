@@ -82,24 +82,24 @@ export default function DocumentsPage() {
         <section className="min-h-svh flex flex-col justify-center px-6 py-20">
           <div className="max-w-4xl mx-auto text-center">
             {/* Icon */}
-            <div className="mb-10 animate-in fade-in slide-in-from-bottom-4 duration-700">
+            <div className="mb-6">
               <DaimonIcon className="w-24 h-24 mx-auto text-daemon" />
             </div>
 
             {/* Main headline */}
-            <h1 className="font-[family-name:var(--font-display)] text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-semibold text-foreground tracking-tight leading-[1.1] mb-8 animate-in fade-in slide-in-from-bottom-6 duration-700 delay-150">
+            <h1 className="font-[family-name:var(--font-display)] text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-semibold text-foreground tracking-tight leading-[1.1] mb-8">
               An AI editor for
               <br />
               <span className="text-daemon">thinking better</span>
             </h1>
 
             {/* Subheadline */}
-            <p className="font-[family-name:var(--font-serif)] text-lg sm:text-xl md:text-2xl text-muted-foreground max-w-2xl mx-auto leading-relaxed mb-12 animate-in fade-in slide-in-from-bottom-6 duration-700 delay-300">
+            <p className="font-[family-name:var(--font-serif)] text-lg sm:text-xl md:text-2xl text-muted-foreground max-w-2xl mx-auto leading-relaxed mb-12">
               Daimon is the AI that prompts you&mdash;asking questions, surfacing connections, provoking insight. It never writes for you.
             </p>
 
             {/* CTA */}
-            <div className="animate-in fade-in slide-in-from-bottom-6 duration-700 delay-500">
+            <div>
               <Button asChild size="lg" className="bg-daemon hover:bg-daemon/90 text-daemon-foreground text-lg px-8 py-6 h-auto">
                 <Link href="/signin">
                   Begin Writing
@@ -237,10 +237,10 @@ export default function DocumentsPage() {
               <br />
               not a replacement.
             </h2>
-            <p className="font-[family-name:var(--font-serif)] text-lg text-muted-foreground mb-10 animate-in fade-in slide-in-from-bottom-6 duration-700 delay-100">
+            <p className="font-[family-name:var(--font-serif)] text-lg text-muted-foreground mb-10">
               The AI that prompts you, never writes for you.
             </p>
-            <div className="animate-in fade-in slide-in-from-bottom-6 duration-700 delay-200">
+            <div>
               <Button asChild size="lg" className="bg-daemon hover:bg-daemon/90 text-daemon-foreground text-lg px-8 py-6 h-auto">
                 <Link href="/signin">
                   Begin Writing
