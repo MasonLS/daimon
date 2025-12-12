@@ -222,7 +222,7 @@ function EmptyCommentsState() {
         Start a conversation
       </p>
       <p className="text-xs text-muted-foreground max-w-[200px]">
-        Highlight text and right-click to add a comment or summon your daemon
+        Highlight text and right-click to add a comment or summon Daimon
       </p>
     </div>
   );
@@ -433,7 +433,7 @@ function CommentCard({ comment, editor }: CommentCardProps) {
 
         {comment.status === "error" && (
           <p className="text-xs text-destructive">
-            The daemon could not respond. Please try again.
+            Daimon could not respond. Please try again.
           </p>
         )}
       </div>

@@ -4,8 +4,7 @@ import "./globals.css";
 import { ConvexAuthNextjsServerProvider } from "@convex-dev/auth/nextjs/server";
 import ConvexClientProvider from "@/components/ConvexClientProvider";
 import { ThemeProvider } from "@/components/theme-provider";
-import { AppSidebar } from "@/components/app-sidebar";
-import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
+import { AuthLayout } from "@/components/auth-layout";
 
 const sourceSans = Source_Sans_3({
   variable: "--font-sans",
@@ -28,7 +27,7 @@ const cormorantGaramond = Cormorant_Garamond({
 
 export const metadata: Metadata = {
   title: "Daimon - Your Writing Companion",
-  description: "An AI companion for serious writers. Your daimon whispers ideas and connections, never putting words in your mouth.",
+  description: "An AI companion for serious writers. Daimon whispers ideas and connections, never putting words in your mouth.",
   icons: {
     icon: "/favicon.svg",
   },
@@ -52,16 +51,7 @@ export default function RootLayout({
               enableSystem
               disableTransitionOnChange
             >
-              <SidebarProvider className="h-svh max-h-svh">
-                <AppSidebar />
-                <SidebarInset className="min-h-0 overflow-hidden">
-                  {/* Mobile sidebar trigger */}
-                  <header className="flex h-12 shrink-0 items-center gap-2 px-4 md:hidden">
-                    <SidebarTrigger className="-ml-1" />
-                  </header>
-                  <div className="flex flex-1 flex-col min-h-0 overflow-hidden">{children}</div>
-                </SidebarInset>
-              </SidebarProvider>
+              <AuthLayout>{children}</AuthLayout>
             </ThemeProvider>
           </ConvexClientProvider>
         </body>

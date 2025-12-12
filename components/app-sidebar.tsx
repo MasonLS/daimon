@@ -98,7 +98,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
   const handleSignOut = async () => {
     await signOut()
-    router.push("/signin")
+    router.push("/")
   }
 
   const handleArchive = async (docId: Id<"documents">) => {
