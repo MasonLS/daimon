@@ -75,9 +75,9 @@ interface Source {
 // ============================================================================
 
 const ANTHROPIC_MODELS = {
-  "claude-opus-4-5-20250514": { name: "Claude Opus 4.5", context: "200k" },
-  "claude-sonnet-4-5-20250826": { name: "Claude Sonnet 4.5", context: "1M" },
-  "claude-haiku-4-5-20241022": { name: "Claude Haiku 4.5", context: "200k" },
+  "claude-opus-4-5-20251101": { name: "Claude Opus 4.5", context: "200k" },
+  "claude-sonnet-4-5-20250929": { name: "Claude Sonnet 4.5", context: "200k" },
+  "claude-haiku-4-5-20251001": { name: "Claude Haiku 4.5", context: "200k" },
 };
 
 const OPENAI_MODELS = {
@@ -155,7 +155,7 @@ function DocumentSettingsContent({
 
   // Local state for form
   const [provider, setProvider] = useState<Provider>("anthropic");
-  const [model, setModel] = useState("claude-sonnet-4-5-20250826");
+  const [model, setModel] = useState("claude-sonnet-4-5-20250929");
   const [temperature, setTemperature] = useState(0.7);
   const [maxSteps, setMaxSteps] = useState(5);
   const [systemPrompt, setSystemPrompt] = useState("");
@@ -243,7 +243,7 @@ function DocumentSettingsContent({
   const handleProviderChange = useCallback((newProvider: Provider) => {
     setProvider(newProvider);
     if (newProvider === "anthropic") {
-      setModel("claude-sonnet-4-5-20250826");
+      setModel("claude-sonnet-4-5-20250929");
     } else {
       setModel("gpt-5.2");
     }

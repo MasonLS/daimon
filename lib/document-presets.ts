@@ -53,7 +53,7 @@ export const WRITING_PRESETS: DocumentPreset[] = [
     category: "writing",
     icon: "GraduationCap",
     settings: {
-      model: "claude-sonnet-4-5-20250826",
+      model: "claude-sonnet-4-5-20250929",
       provider: "anthropic",
       temperature: 0.7,
       maxSteps: 5,
@@ -82,7 +82,7 @@ ${BASE_GUIDELINES}
     category: "writing",
     icon: "Rss",
     settings: {
-      model: "claude-sonnet-4-5-20250826",
+      model: "claude-sonnet-4-5-20250929",
       provider: "anthropic",
       temperature: 0.8,
       maxSteps: 5,
@@ -112,7 +112,7 @@ ${BASE_GUIDELINES}
     category: "writing",
     icon: "BookOpen",
     settings: {
-      model: "claude-sonnet-4-5-20250826",
+      model: "claude-sonnet-4-5-20250929",
       provider: "anthropic",
       temperature: 0.9,
       maxSteps: 5,
@@ -142,7 +142,7 @@ ${BASE_GUIDELINES}
     category: "writing",
     icon: "Film",
     settings: {
-      model: "claude-sonnet-4-5-20250826",
+      model: "claude-sonnet-4-5-20250929",
       provider: "anthropic",
       temperature: 0.7,
       maxSteps: 5,
@@ -172,7 +172,7 @@ ${BASE_GUIDELINES}
     category: "writing",
     icon: "Feather",
     settings: {
-      model: "claude-sonnet-4-5-20250826",
+      model: "claude-sonnet-4-5-20250929",
       provider: "anthropic",
       temperature: 1.0,
       maxSteps: 5,
@@ -202,7 +202,7 @@ ${BASE_GUIDELINES}
     category: "writing",
     icon: "NotebookPen",
     settings: {
-      model: "claude-sonnet-4-5-20250826",
+      model: "claude-sonnet-4-5-20250929",
       provider: "anthropic",
       temperature: 0.8,
       maxSteps: 5,
@@ -239,7 +239,7 @@ export const PROFESSIONAL_PRESETS: DocumentPreset[] = [
     category: "professional",
     icon: "Code",
     settings: {
-      model: "claude-sonnet-4-5-20250826",
+      model: "claude-sonnet-4-5-20250929",
       provider: "anthropic",
       temperature: 0.3,
       maxSteps: 5,
@@ -269,7 +269,7 @@ ${BASE_GUIDELINES}
     category: "professional",
     icon: "BarChart3",
     settings: {
-      model: "claude-sonnet-4-5-20250826",
+      model: "claude-sonnet-4-5-20250929",
       provider: "anthropic",
       temperature: 0.4,
       maxSteps: 5,
@@ -299,7 +299,7 @@ ${BASE_GUIDELINES}
     category: "professional",
     icon: "Lightbulb",
     settings: {
-      model: "claude-sonnet-4-5-20250826",
+      model: "claude-sonnet-4-5-20250929",
       provider: "anthropic",
       temperature: 0.5,
       maxSteps: 5,
@@ -329,7 +329,7 @@ ${BASE_GUIDELINES}
     category: "professional",
     icon: "Users",
     settings: {
-      model: "claude-sonnet-4-5-20250826",
+      model: "claude-sonnet-4-5-20250929",
       provider: "anthropic",
       temperature: 0.3,
       maxSteps: 5,
@@ -359,7 +359,7 @@ ${BASE_GUIDELINES}
     category: "professional",
     icon: "Mail",
     settings: {
-      model: "claude-sonnet-4-5-20250826",
+      model: "claude-sonnet-4-5-20250929",
       provider: "anthropic",
       temperature: 0.5,
       maxSteps: 5,

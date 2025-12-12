@@ -284,7 +284,7 @@ export function createDaimonAgent(settings: DocumentSettings) {
  */
 export const daimon = new Agent(components.agent, {
   name: "Daimon",
-  languageModel: anthropic("claude-sonnet-4-5-20250826"),
+  languageModel: anthropic("claude-sonnet-4-5-20250929"),
   instructions: DEFAULT_SYSTEM_PROMPT,
   tools: {
     searchSources: searchSourcesTool,

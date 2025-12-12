@@ -7,9 +7,9 @@ import { DEFAULT_SYSTEM_PROMPT } from "./aiAgent";
 // Available AI models configuration
 export const AVAILABLE_MODELS = {
   anthropic: {
-    "claude-opus-4-5-20250514": { name: "Claude Opus 4.5", context: "200k" },
-    "claude-sonnet-4-5-20250826": { name: "Claude Sonnet 4.5", context: "1M" },
-    "claude-haiku-4-5-20241022": { name: "Claude Haiku 4.5", context: "200k" },
+    "claude-opus-4-5-20251101": { name: "Claude Opus 4.5", context: "200k" },
+    "claude-sonnet-4-5-20250929": { name: "Claude Sonnet 4.5", context: "200k" },
+    "claude-haiku-4-5-20251001": { name: "Claude Haiku 4.5", context: "200k" },
   },
   openai: {
     "gpt-5.2": { name: "GPT-5.2 Thinking", context: "200k" },
@@ -23,7 +23,7 @@ export const AVAILABLE_MODELS = {
 
 // Default settings values
 export const DEFAULT_SETTINGS = {
-  model: "claude-sonnet-4-5-20250826" as string,
+  model: "claude-sonnet-4-5-20250929" as string,
   provider: "anthropic" as const,
   temperature: 0.7,
   maxSteps: 5,
