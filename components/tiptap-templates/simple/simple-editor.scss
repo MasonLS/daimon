@@ -231,8 +231,9 @@ body,
 
   /* Active/selected state */
   &.comment-active {
-    background-color: hsl(var(--daemon) / 0.35);
-    border-bottom-color: hsl(var(--daemon));
+    background-color: hsl(var(--daemon) / 0.6) !important;
+    border-bottom-color: hsl(var(--daemon)) !important;
+    outline: 2px solid hsl(var(--daemon)) !important;
   }
 }
 
@@ -247,7 +248,8 @@ body,
   }
 
   &.comment-active {
-    background-color: hsl(var(--daemon) / 0.4);
-    border-bottom-color: hsl(var(--daemon));
+    background-color: hsl(var(--daemon) / 0.6) !important;
+    border-bottom-color: hsl(var(--daemon)) !important;
+    outline: 2px solid hsl(var(--daemon)) !important;
   }
 }

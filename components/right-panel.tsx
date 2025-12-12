@@ -26,6 +26,8 @@ interface RightPanelContextValue {
   open: () => void;
   focusedCommentId: Id<"comments"> | null;
   setFocusedCommentId: (id: Id<"comments"> | null) => void;
+  activeCommentId: string | null;  // UUID of the comment highlighted in the editor
+  setActiveCommentId: (id: string | null) => void;
 }
 
 const RightPanelContext = createContext<RightPanelContextValue | null>(null);
@@ -53,6 +55,7 @@ export function RightPanelProvider({
 }: RightPanelProviderProps) {
   const [isOpen, setIsOpen] = useState(defaultOpen);
   const [focusedCommentId, setFocusedCommentId] = useState<Id<"comments"> | null>(null);
+  const [activeCommentId, setActiveCommentId] = useState<string | null>(null);
 
   const toggle = useCallback(() => setIsOpen((prev) => !prev), []);
   const open = useCallback(() => setIsOpen(true), []);
@@ -66,6 +69,8 @@ export function RightPanelProvider({
         open,
         focusedCommentId,
         setFocusedCommentId,
+        activeCommentId,
+        setActiveCommentId,
       }}
     >
       {children}
@@ -238,7 +243,7 @@ function CommentCard({ comment, editor }: CommentCardProps) {
   const [isReplying, setIsReplying] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const { focusedCommentId, setFocusedCommentId } = useRightPanel();
+  const { focusedCommentId, setFocusedCommentId, setActiveCommentId } = useRightPanel();
 
   const addReply = useMutation(api.comments.addReply);
   const addInitialMessage = useMutation(api.comments.addInitialMessage);
@@ -254,6 +259,9 @@ function CommentCard({ comment, editor }: CommentCardProps) {
 
   const handleScrollToComment = useCallback(() => {
     if (!editor) return;
+
+    // Set this comment as active (highlights it in the editor)
+    setActiveCommentId(comment.commentId);
 
     let found = false;
     editor.state.doc.descendants((node, pos) => {
@@ -272,7 +280,7 @@ function CommentCard({ comment, editor }: CommentCardProps) {
         return false;
       }
     });
-  }, [editor, comment.commentId]);
+  }, [editor, comment.commentId, setActiveCommentId]);
 
   const handleReply = useCallback(async () => {
     if (!replyText.trim()) return;
@@ -315,6 +323,9 @@ function CommentCard({ comment, editor }: CommentCardProps) {
 
   const handleResolve = useCallback(async () => {
     try {
+      // Clear active state before resolving
+      setActiveCommentId(null);
+
       if (editor) {
         editor.state.doc.descendants((node, pos) => {
           const commentMark = node.marks.find(
@@ -338,13 +349,40 @@ function CommentCard({ comment, editor }: CommentCardProps) {
     } catch (error) {
       console.error("Failed to resolve comment:", error);
     }
-  }, [editor, comment.commentId, comment._id, resolveComment]);
+  }, [editor, comment.commentId, comment._id, resolveComment, setActiveCommentId]);
 
   const aiMessages = comment.messages.filter((m) => m.role === "assistant");
   const userMessages = comment.messages.filter((m) => m.role === "user");
 
+  // Highlight the referenced text when interacting with the card
+  const handleCardInteraction = useCallback(() => {
+    if (!editor) return;
+
+    // Find and select the comment text in the editor
+    let found = false;
+    editor.state.doc.descendants((node, pos) => {
+      if (found) return false;
+
+      const commentMark = node.marks.find(
+        (mark) =>
+          mark.type.name === "comment" &&
+          mark.attrs.commentId === comment.commentId
+      );
+
+      if (commentMark) {
+        editor.commands.setTextSelection({ from: pos, to: pos + node.nodeSize });
+        found = true;
+        return false;
+      }
+    });
+  }, [editor, comment.commentId]);
+
   return (
-    <div className="rounded-lg border border-border/50 bg-background/50 overflow-hidden group hover:border-daemon/30 transition-colors">
+    <div
+      className="rounded-lg border border-border/50 bg-background/50 overflow-hidden group hover:border-daemon/30 transition-colors"
+      onMouseEnter={handleCardInteraction}
+      onFocusCapture={handleCardInteraction}
+    >
       {/* Selected Text Quote */}
       <button
         onClick={handleScrollToComment}

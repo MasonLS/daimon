@@ -37,7 +37,7 @@ function DocumentPageContent({ documentId }: DocumentPageProps) {
   const updateDocument = useMutation(api.documents.update)
   const commentCount = useQuery(api.comments.countByDocument, { documentId })
   const sourcesCount = useQuery(api.sources.countByDocument, { documentId })
-  const { open, setFocusedCommentId } = useRightPanel()
+  const { open, setFocusedCommentId, activeCommentId, setActiveCommentId, isOpen } = useRightPanel()
 
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("saved")
   const [title, setTitle] = useState("")
@@ -157,6 +157,52 @@ function DocumentPageContent({ documentId }: DocumentPageProps) {
       }
     }
   }, [])
+
+  // Sync activeCommentId to editor DOM (apply/remove comment-active class)
+  useEffect(() => {
+    if (!editor) return
+
+    const dom = editor.view.dom
+
+    // Clear all active classes
+    dom.querySelectorAll('.comment-highlight.comment-active')
+      .forEach(el => el.classList.remove('comment-active'))
+
+    // Apply active class to selected comment spans
+    if (activeCommentId) {
+      const elements = dom.querySelectorAll(`[data-comment-id="${activeCommentId}"]`)
+      console.log("Applying active class to elements:", elements.length, "for commentId:", activeCommentId)
+      elements.forEach(el => {
+        el.classList.add('comment-active')
+        console.log("Element classes after adding:", el.className)
+      })
+    }
+  }, [editor, activeCommentId])
+
+  // Clear active comment when panel is closed
+  useEffect(() => {
+    if (!isOpen) {
+      setActiveCommentId(null)
+    }
+  }, [isOpen, setActiveCommentId])
+
+  // Clear active comment when clicking in the editor (but not on a comment highlight)
+  useEffect(() => {
+    if (!editor) return
+
+    const handleClick = (event: MouseEvent) => {
+      const target = event.target as HTMLElement
+      // Don't clear if clicking on a comment highlight
+      if (target.closest('.comment-highlight')) return
+      console.log("Clearing active comment due to editor click")
+      setActiveCommentId(null)
+    }
+
+    editor.view.dom.addEventListener('click', handleClick)
+    return () => {
+      editor.view.dom.removeEventListener('click', handleClick)
+    }
+  }, [editor, setActiveCommentId])
 
   // Loading state
   if (document === undefined) {
