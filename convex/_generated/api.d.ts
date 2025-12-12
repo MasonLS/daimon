@@ -17,6 +17,7 @@ import type * as http from "../http.js";
 import type * as rag from "../rag.js";
 import type * as sources from "../sources.js";
 import type * as sourcesActions from "../sourcesActions.js";
+import type * as userPreferences from "../userPreferences.js";
 
 import type {
   ApiFromModules,
@@ -34,6 +35,7 @@ declare const fullApi: ApiFromModules<{
   rag: typeof rag;
   sources: typeof sources;
   sourcesActions: typeof sourcesActions;
+  userPreferences: typeof userPreferences;
 }>;
 
 /**

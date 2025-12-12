@@ -104,4 +104,10 @@ export default defineSchema({
   })
     .index("by_documentId", ["documentId"])
     .index("by_ownerId", ["ownerId"]),
+
+  // User preferences for onboarding and settings
+  userPreferences: defineTable({
+    userId: v.id("users"),
+    hasSeenOnboarding: v.boolean(),
+  }).index("by_userId", ["userId"]),
 });

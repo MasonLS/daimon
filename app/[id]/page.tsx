@@ -1,6 +1,6 @@
 "use client"
 
-import { useParams } from "next/navigation"
+import { useParams, useSearchParams } from "next/navigation"
 import { useConvexAuth } from "convex/react"
 import { DocumentPage } from "@/components/document-page"
 import { Id } from "@/convex/_generated/dataModel"
@@ -10,6 +10,7 @@ import { Spinner } from "@/components/ui/spinner"
 
 export default function DocumentEditPage() {
   const params = useParams()
+  const searchParams = useSearchParams()
   const { isAuthenticated, isLoading } = useConvexAuth()
   const documentId = params.id as Id<"documents">
 
@@ -43,5 +44,8 @@ export default function DocumentEditPage() {
     )
   }
 
-  return <DocumentPage documentId={documentId} />
+  // Check if this is the intro flow (first document after onboarding)
+  const isIntro = searchParams.get("intro") === "true"
+
+  return <DocumentPage documentId={documentId} autoOpenPanel={isIntro} />
 }

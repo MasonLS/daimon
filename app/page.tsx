@@ -4,7 +4,8 @@ import { useQuery, useMutation } from "convex/react"
 import { useConvexAuth } from "convex/react"
 import { api } from "@/convex/_generated/api"
 import Link from "next/link"
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { useSearchParams, useRouter } from "next/navigation"
 import { Id } from "@/convex/_generated/dataModel"
 import { Plus, Trash2, PenSquare, MoreHorizontal, Archive } from "lucide-react"
 import { DaimonIcon } from "@/components/icons/daimon-icon"
@@ -34,7 +35,10 @@ import {
 
 export default function DocumentsPage() {
   const { isAuthenticated, isLoading } = useConvexAuth()
+  const searchParams = useSearchParams()
+  const router = useRouter()
   const documents = useQuery(api.documents.list)
+  const userPrefs = useQuery(api.userPreferences.get)
   const archiveDocument = useMutation(api.documents.archive)
   const removeDocument = useMutation(api.documents.remove)
   const [deleteDialog, setDeleteDialog] = useState<{
@@ -42,6 +46,33 @@ export default function DocumentsPage() {
     docId: Id<"documents"> | null
     docTitle: string
   }>({ open: false, docId: null, docTitle: "" })
+  const [onboardingModalOpen, setOnboardingModalOpen] = useState(false)
+  const [onboardingTriggered, setOnboardingTriggered] = useState(false)
+
+  // Detect onboarding query param and auto-open modal
+  const isOnboarding = searchParams.get("onboarding") === "true"
+
+  useEffect(() => {
+    // Only trigger onboarding once per page load
+    if (onboardingTriggered) return
+
+    // Show onboarding modal if:
+    // 1. URL has ?onboarding=true
+    // 2. Or user has never seen onboarding AND has no documents
+    const shouldShowOnboarding = isOnboarding ||
+      (userPrefs !== undefined && userPrefs?.hasSeenOnboarding !== true && documents?.length === 0)
+
+    if (shouldShowOnboarding && isAuthenticated) {
+      setOnboardingModalOpen(true)
+      setOnboardingTriggered(true)
+    }
+  }, [isOnboarding, userPrefs, documents, isAuthenticated, onboardingTriggered])
+
+  const handleOnboardingModalClose = (open: boolean) => {
+    setOnboardingModalOpen(open)
+    // Note: Don't redirect here - the modal handles navigation to the new document
+    // If user dismisses without creating, they'll stay on homepage which is fine
+  }
 
   // Landing page for unauthenticated users (show immediately, even during auth loading)
   if (!isAuthenticated) {
@@ -267,6 +298,13 @@ export default function DocumentsPage() {
 
   return (
     <>
+    {/* Onboarding modal for new users */}
+    <NewDocumentModal
+      open={onboardingModalOpen}
+      onOpenChange={handleOnboardingModalClose}
+      isOnboarding={true}
+    />
+
     <div className="flex-1 bg-background">
       {/* Page header */}
       <div className="bg-background/50">

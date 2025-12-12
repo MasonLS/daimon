@@ -19,13 +19,14 @@ import { DocumentSettingsModal } from "@/components/document-settings-modal"
 
 interface DocumentPageProps {
   documentId: Id<"documents">
+  autoOpenPanel?: boolean
 }
 
 type SaveStatus = "saved" | "saving" | "unsaved"
 
-export function DocumentPage({ documentId }: DocumentPageProps) {
+export function DocumentPage({ documentId, autoOpenPanel = false }: DocumentPageProps) {
   return (
-    <RightPanelProvider>
+    <RightPanelProvider defaultOpen={autoOpenPanel}>
       <DocumentPageContent documentId={documentId} />
     </RightPanelProvider>
   )

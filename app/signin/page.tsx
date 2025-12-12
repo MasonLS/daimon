@@ -52,7 +52,12 @@ export default function SignIn() {
                   setLoading(false);
                 })
                 .then(() => {
-                  router.push("/");
+                  // For new sign-ups, redirect to onboarding flow
+                  if (flow === "signUp") {
+                    router.push("/?onboarding=true");
+                  } else {
+                    router.push("/");
+                  }
                 });
             }}
           >

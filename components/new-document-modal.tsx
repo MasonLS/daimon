@@ -69,27 +69,60 @@ function getIconComponent(iconName: string): LucideIcon {
 }
 
 interface NewDocumentModalProps {
-  children: React.ReactNode;
+  children?: React.ReactNode;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  isOnboarding?: boolean;
 }
 
-export function NewDocumentModal({ children }: NewDocumentModalProps) {
-  const [open, setOpen] = useState(false);
+export function NewDocumentModal({
+  children,
+  open: controlledOpen,
+  onOpenChange: controlledOnOpenChange,
+  isOnboarding = false,
+}: NewDocumentModalProps) {
+  const [internalOpen, setInternalOpen] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
+
+  // Support both controlled and uncontrolled modes
+  const isControlled = controlledOpen !== undefined;
+  const open = isControlled ? controlledOpen : internalOpen;
+  const setOpen = (value: boolean) => {
+    if (isControlled) {
+      controlledOnOpenChange?.(value);
+    } else {
+      setInternalOpen(value);
+    }
+  };
 
   const router = useRouter();
   const createWithPreset = useMutation(api.documents.createWithPreset);
   const createWithCopy = useMutation(api.documents.createWithCopy);
+  const createOnboardingDocument = useMutation(api.documents.createOnboardingDocument);
+  const markOnboardingSeen = useMutation(api.userPreferences.markOnboardingSeen);
   const documents = useQuery(api.documents.list);
 
   const handleSelectPreset = async (presetId: string | null) => {
     setIsCreating(true);
     try {
       const preset = presetId ? getPresetById(presetId) : null;
-      const documentId = await createWithPreset({
-        title: "Untitled",
-        preset: preset?.settings ?? null,
-      });
-      router.push(`/${documentId}`);
+
+      let documentId: string;
+      if (isOnboarding) {
+        // Use onboarding mutation which creates intro content and Daimon comment
+        documentId = await createOnboardingDocument({
+          title: "Untitled",
+          preset: preset?.settings ?? null,
+        });
+        await markOnboardingSeen({});
+        router.push(`/${documentId}?intro=true`);
+      } else {
+        documentId = await createWithPreset({
+          title: "Untitled",
+          preset: preset?.settings ?? null,
+        });
+        router.push(`/${documentId}`);
+      }
       setOpen(false);
     } catch (error) {
       console.error("Failed to create document:", error);
@@ -116,12 +149,17 @@ export function NewDocumentModal({ children }: NewDocumentModalProps) {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>{children}</DialogTrigger>
+      {children && <DialogTrigger asChild>{children}</DialogTrigger>}
       <DialogContent className="sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle className="font-[family-name:var(--font-display)]">
-            Create New Document
+            {isOnboarding ? "Welcome to Daimon" : "Create New Document"}
           </DialogTitle>
+          {isOnboarding && (
+            <p className="text-sm text-muted-foreground mt-1">
+              Choose how you&apos;d like to start writing. Daimon will be there to help.
+            </p>
+          )}
         </DialogHeader>
 
         <Tabs defaultValue="writing" className="mt-2">
